@@ -1,0 +1,25 @@
+# Prerequisites
+build/
+bin/
+obj/
+
+# MSVC/Visual Studio junk
+.vs/
+out/
+*.exe
+*.pdb
+*.obj
+*.ilk
+*.log
+
+# Cursor/VS Code junk
+.vscode/
+.cursor/
+
+# CMake junk
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_local.cmake
+Makefile
