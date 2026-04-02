@@ -1,14 +1,27 @@
 #include <iostream>
-#include <string>
+#include <iomanip>
+#include "PhysicsEngine.hpp"
 
 int main() {
-    std::cout << "========================================" << std::endl;
-    std::cout << "AeroStabilize-1D: System Check" << std::endl;
-    std::cout << "Status: INITIALIZING..." << std::endl;
-    std::cout << "Compiler: MSVC (Visual Studio Build Tools)" << std::endl;
-    std::cout << "========================================" << std::endl;
+    PhysicsEngine drone(1.5, 10.0);
     
-    std::cout << "Check Complete. System is ONLINE." << std::endl;
-    
+    double dt = 0.1;
+    double elapsed_time = 0.0;
+
+    std::cout << "Time(s)\tAlt(m)\tVel(m/s)\n";
+    std::cout << "--------------------------\n";
+
+    for (int i = 0; i < 20; ++i) {
+        double thrust = 0.0;
+        
+        drone.update(thrust, dt);
+        elapsed_time += dt;
+
+        std::cout << std::fixed << std::setprecision(2) 
+                  << elapsed_time << "\t" 
+                  << drone.getAltitude() << "\t" 
+                  << drone.getVelocity() << "\n";
+    }
+
     return 0;
 }
