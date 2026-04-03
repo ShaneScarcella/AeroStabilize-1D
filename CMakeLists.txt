@@ -9,4 +9,5 @@ include_directories(include)
 add_executable(AeroStabilize-1D 
     src/main.cpp
     src/PhysicsEngine.cpp
+    src/PIDController.cpp
 )
