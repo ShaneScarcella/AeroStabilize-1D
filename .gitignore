@@ -3,7 +3,7 @@ build/
 bin/
 obj/
 
-# MSVC/Visual Studio junk
+# MSVC/Visual Studio
 .vs/
 out/
 *.exe
@@ -12,14 +12,17 @@ out/
 *.ilk
 *.log
 
-# Cursor/VS Code junk
+# Cursor/VS Code
 .vscode/
 .cursor/
 
-# CMake junk
+# CMake
 CMakeCache.txt
 CMakeFiles/
 CMakeScripts/
 cmake_install.cmake
 install_local.cmake
 Makefile
+
+flight_data.csv
+.venv/

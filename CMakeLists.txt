@@ -10,4 +10,5 @@ add_executable(AeroStabilize-1D
     src/main.cpp
     src/PhysicsEngine.cpp
     src/PIDController.cpp
+    src/TelemetryLogger.cpp
 )
