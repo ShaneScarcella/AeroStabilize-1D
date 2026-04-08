@@ -9,7 +9,9 @@ int main() {
     try {
         PhysicsEngine drone(1.5, 0.0);
 
-        PIDController flightComputer(10.0, 1.0, 5.0, 0.0, 30.0);
+        // Altitude loop: PID output is thrust (N), clamped to [min, max]. P and D act
+        // on error and its rate; I integrates so the command can converge to hover (mg).
+        PIDController flightComputer(12.0, 4.0, 7.0, 0.0, 30.0);
 
         double target_altitude = 10.0;
         double dt = 0.1;
@@ -20,7 +22,8 @@ int main() {
         std::cout << "Time(s)\tTarget\tAlt(m)\tVel(m/s)\tThrust(N)\n";
         std::cout << "---------------------------------------------------------\n";
 
-        for (int i = 0; i < 50; ++i) {
+        constexpr int kSimulationSteps = 100;
+        for (int i = 0; i < kSimulationSteps; ++i) {
             double current_altitude = drone.getAltitude();
 
             double thrust = flightComputer.calculate(target_altitude, current_altitude, dt);
