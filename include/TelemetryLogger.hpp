@@ -12,7 +12,7 @@ public:
     TelemetryLogger& operator=(const TelemetryLogger&) = delete;
 
     void logState(double time_s, double target_alt_m, double altitude_m,
-                  double velocity_m_s, double thrust_n);
+                  double velocity_m_s, double thrust_n, double disturbance_n);
 
 private:
     std::ofstream _file;

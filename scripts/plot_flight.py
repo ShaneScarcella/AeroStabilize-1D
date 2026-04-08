@@ -33,13 +33,24 @@ def main() -> None:
 
     df = pd.read_csv(path)
 
-    fig, ax = plt.subplots(figsize=(9, 5))
+    _, ax = plt.subplots(figsize=(9, 5))
     ax.plot(df["Time_s"], df["Altitude_m"], label="altitude", color="C0")
     ax.plot(df["Time_s"], df["Target_m"], "--", label="target", color="C1")
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Altitude (m)")
-    ax.set_title("AeroStabilize-1D — altitude vs time")
-    ax.legend()
+    ax.set_title("AeroStabilize-1D — altitude vs time (disturbance rejection)")
+
+    if "Disturbance_N" in df.columns and df["Disturbance_N"].abs().max() > 0:
+        ax2 = ax.twinx()
+        ax2.step(df["Time_s"], df["Disturbance_N"], where="post", color="C2", alpha=0.85, label="disturbance")
+        ax2.set_ylabel("Disturbance (N)")
+        ax2.axhline(0.0, color="gray", linewidth=0.8, linestyle=":")
+        lines1, labels1 = ax.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax.legend(lines1 + lines2, labels1 + labels2, loc="upper right")
+    else:
+        ax.legend()
+
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.show()

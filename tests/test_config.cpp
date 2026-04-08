@@ -92,5 +92,32 @@ telemetry_csv = flight.csv
     EXPECT_NEAR(c.pid_min_thrust_n, 0.0, 1e-12);
     EXPECT_NEAR(c.pid_max_thrust_n, 25.0, 1e-12);
     EXPECT_EQ(c.telemetry_csv, "flight.csv");
+    EXPECT_NEAR(c.gust_force_n, 0.0, 1e-12);
+    EXPECT_EQ(c.gust_start_step, 0);
+    EXPECT_EQ(c.gust_duration_steps, 0);
+    fs::remove(path);
+}
+
+TEST(Config, OptionalGustKeysLoad) {
+    const fs::path path = makeTempConfigPath();
+    writeFile(path, R"(mass_kg = 2.0
+initial_altitude_m = 10.0
+target_altitude_m = 10.0
+dt_s = 0.1
+simulation_steps = 50
+pid_kp = 12.0
+pid_ki = 4.0
+pid_kd = 7.0
+pid_min_thrust_n = 0.0
+pid_max_thrust_n = 30.0
+gust_force_n = -10.0
+gust_start_step = 5
+gust_duration_steps = 3
+telemetry_csv = out.csv
+)");
+    const Config c = Config::loadFromFile(path.string());
+    EXPECT_NEAR(c.gust_force_n, -10.0, 1e-12);
+    EXPECT_EQ(c.gust_start_step, 5);
+    EXPECT_EQ(c.gust_duration_steps, 3);
     fs::remove(path);
 }

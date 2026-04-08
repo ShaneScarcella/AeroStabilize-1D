@@ -4,7 +4,9 @@ class PhysicsEngine {
 public:
     PhysicsEngine(double mass, double initial_altitude = 0.0);
 
-    double update(double thrust_n, double dt);
+    /** @param thrust_n vertical thrust (N), positive upward
+     *  @param disturbance_force_n extra vertical force from environment (N), positive upward; e.g. wind gust downward = negative */
+    double update(double thrust_n, double disturbance_force_n, double dt);
 
     double getAltitude() const;
     double getVelocity() const;

@@ -1,8 +1,8 @@
 # AeroStabilize-1D — edit this file and rerun the simulator (no recompile).
 
 mass_kg = 2.0
-initial_altitude_m = 0.0
-target_altitude_m = 50.0
+initial_altitude_m = 10.0
+target_altitude_m = 10.0
 dt_s = 0.1
 simulation_steps = 200
 
@@ -12,5 +12,10 @@ pid_ki = 4.0
 pid_kd = 7.0
 pid_min_thrust_n = 0.0
 pid_max_thrust_n = 30.0
+
+# Wind gust: extra vertical force (N), positive up. Omitted keys = no gust.
+gust_force_n = -10.0
+gust_start_step = 30
+gust_duration_steps = 20
 
 telemetry_csv = flight_data.csv

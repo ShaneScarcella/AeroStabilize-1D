@@ -8,7 +8,7 @@ TelemetryLogger::TelemetryLogger(const std::string& filepath)
     if (!_file.is_open()) {
         throw std::runtime_error("TelemetryLogger: could not open " + filepath);
     }
-    _file << "Time_s,Target_m,Altitude_m,Velocity_m_s,Thrust_N\n";
+    _file << "Time_s,Target_m,Altitude_m,Velocity_m_s,Thrust_N,Disturbance_N\n";
     _file.flush();
 }
 
@@ -19,12 +19,13 @@ TelemetryLogger::~TelemetryLogger() {
 }
 
 void TelemetryLogger::logState(double time_s, double target_alt_m, double altitude_m,
-                               double velocity_m_s, double thrust_n) {
+                               double velocity_m_s, double thrust_n, double disturbance_n) {
     _file << std::fixed << std::setprecision(6)
           << time_s << ','
           << target_alt_m << ','
           << altitude_m << ','
           << velocity_m_s << ','
-          << thrust_n << '\n';
+          << thrust_n << ','
+          << disturbance_n << '\n';
     _file.flush();
 }

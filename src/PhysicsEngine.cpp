@@ -4,10 +4,11 @@ PhysicsEngine::PhysicsEngine(double mass, double initial_altitude)
     : _mass(mass), _altitude(initial_altitude), _velocity(0.0) {
 }
 
-double PhysicsEngine::update(double thrust_n, double dt) {
+double PhysicsEngine::update(double thrust_n, double disturbance_force_n, double dt) {
     double thrust_acceleration = thrust_n / _mass;
-    
-    double total_acceleration = _gravity + thrust_acceleration;
+    double disturbance_acceleration = disturbance_force_n / _mass;
+
+    double total_acceleration = _gravity + thrust_acceleration + disturbance_acceleration;
 
     _velocity += total_acceleration * dt;
     _altitude += _velocity * dt;

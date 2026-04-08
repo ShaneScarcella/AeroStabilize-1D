@@ -109,6 +109,25 @@ Config Config::loadFromFile(const std::string& path) {
     c.pid_max_thrust_n = parseDouble("pid_max_thrust_n", require("pid_max_thrust_n"));
     c.telemetry_csv = require("telemetry_csv");
 
+    auto optionalDouble = [&](const char* key, double default_val) -> double {
+        auto it = raw.find(key);
+        if (it == raw.end()) {
+            return default_val;
+        }
+        return parseDouble(key, it->second);
+    };
+    auto optionalInt = [&](const char* key, int default_val) -> int {
+        auto it = raw.find(key);
+        if (it == raw.end()) {
+            return default_val;
+        }
+        return parseInt(key, it->second);
+    };
+
+    c.gust_force_n = optionalDouble("gust_force_n", 0.0);
+    c.gust_start_step = optionalInt("gust_start_step", 0);
+    c.gust_duration_steps = optionalInt("gust_duration_steps", 0);
+
     if (c.mass_kg <= 0.0) {
         throw std::runtime_error("Config: mass_kg must be positive");
     }
@@ -120,6 +139,12 @@ Config Config::loadFromFile(const std::string& path) {
     }
     if (c.pid_max_thrust_n < c.pid_min_thrust_n) {
         throw std::runtime_error("Config: pid_max_thrust_n must be >= pid_min_thrust_n");
+    }
+    if (c.gust_duration_steps < 0) {
+        throw std::runtime_error("Config: gust_duration_steps must be >= 0");
+    }
+    if (c.gust_start_step < 0) {
+        throw std::runtime_error("Config: gust_start_step must be >= 0");
     }
 
     return c;

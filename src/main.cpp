@@ -34,26 +34,34 @@ int main(int argc, char* argv[]) {
 
         TelemetryLogger telemetry(cfg.telemetry_csv);
 
-        std::cout << "Time(s)\tTarget\tAlt(m)\tVel(m/s)\tThrust(N)\n";
-        std::cout << "---------------------------------------------------------\n";
+        std::cout << "Time(s)\tTarget\tAlt(m)\tVel(m/s)\tThrust(N)\tDist(N)\n";
+        std::cout << "-----------------------------------------------------------------------------\n";
 
         for (int i = 0; i < cfg.simulation_steps; ++i) {
             double current_altitude = drone.getAltitude();
 
             double thrust = flightComputer.calculate(target_altitude, current_altitude, dt);
 
-            drone.update(thrust, dt);
+            double disturbance_n = 0.0;
+            if (cfg.gust_force_n != 0.0 && cfg.gust_duration_steps > 0 &&
+                i >= cfg.gust_start_step &&
+                i < cfg.gust_start_step + cfg.gust_duration_steps) {
+                disturbance_n = cfg.gust_force_n;
+            }
+
+            drone.update(thrust, disturbance_n, dt);
             elapsed_time += dt;
 
             telemetry.logState(elapsed_time, target_altitude, drone.getAltitude(),
-                               drone.getVelocity(), thrust);
+                               drone.getVelocity(), thrust, disturbance_n);
 
             std::cout << std::fixed << std::setprecision(2)
                       << elapsed_time << "\t"
                       << target_altitude << "\t"
                       << drone.getAltitude() << "\t"
                       << drone.getVelocity() << "\t\t"
-                      << thrust << "\n";
+                      << thrust << "\t\t"
+                      << disturbance_n << "\n";
         }
 
         std::cout << "Wrote " << cfg.telemetry_csv << "\n";
