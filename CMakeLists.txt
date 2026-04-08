@@ -8,7 +8,15 @@ include_directories(include)
 
 add_executable(AeroStabilize-1D 
     src/main.cpp
+    src/Config.cpp
     src/PhysicsEngine.cpp
     src/PIDController.cpp
     src/TelemetryLogger.cpp
+)
+
+# Place config next to the executable so runs from the build directory work.
+configure_file(
+    "${CMAKE_SOURCE_DIR}/config.txt"
+    "${CMAKE_BINARY_DIR}/config.txt"
+    COPYONLY
 )

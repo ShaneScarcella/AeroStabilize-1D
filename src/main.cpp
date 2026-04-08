@@ -1,29 +1,43 @@
 #include <iostream>
 #include <iomanip>
 #include <stdexcept>
+#include <string>
+
+#include "Config.hpp"
 #include "PhysicsEngine.hpp"
 #include "PIDController.hpp"
 #include "TelemetryLogger.hpp"
 
-int main() {
+namespace {
+
+constexpr const char* kDefaultConfigPath = "config.txt";
+
+}  // namespace
+
+int main(int argc, char* argv[]) {
     try {
-        PhysicsEngine drone(1.5, 0.0);
+        std::string config_path = kDefaultConfigPath;
+        if (argc >= 2 && argv[1][0] != '\0') {
+            config_path = argv[1];
+        }
 
-        // Altitude loop: PID output is thrust (N), clamped to [min, max]. P and D act
-        // on error and its rate; I integrates so the command can converge to hover (mg).
-        PIDController flightComputer(12.0, 4.0, 7.0, 0.0, 30.0);
+        const Config cfg = Config::loadFromFile(config_path);
 
-        double target_altitude = 10.0;
-        double dt = 0.1;
+        PhysicsEngine drone(cfg.mass_kg, cfg.initial_altitude_m);
+
+        PIDController flightComputer(cfg.pid_kp, cfg.pid_ki, cfg.pid_kd,
+                                   cfg.pid_min_thrust_n, cfg.pid_max_thrust_n);
+
+        const double target_altitude = cfg.target_altitude_m;
+        const double dt = cfg.dt_s;
         double elapsed_time = 0.0;
 
-        TelemetryLogger telemetry("flight_data.csv");
+        TelemetryLogger telemetry(cfg.telemetry_csv);
 
         std::cout << "Time(s)\tTarget\tAlt(m)\tVel(m/s)\tThrust(N)\n";
         std::cout << "---------------------------------------------------------\n";
 
-        constexpr int kSimulationSteps = 100;
-        for (int i = 0; i < kSimulationSteps; ++i) {
+        for (int i = 0; i < cfg.simulation_steps; ++i) {
             double current_altitude = drone.getAltitude();
 
             double thrust = flightComputer.calculate(target_altitude, current_altitude, dt);
@@ -42,10 +56,10 @@ int main() {
                       << thrust << "\n";
         }
 
-        std::cout << "Wrote flight_data.csv\n";
+        std::cout << "Wrote " << cfg.telemetry_csv << "\n";
     } catch (const std::exception& e) {
         std::cerr << e.what() << "\n";
-        std::cerr << "Hint: close flight_data.csv in Excel/other apps if it is open, or run from a writable folder.\n";
+        std::cerr << "Hint: close the telemetry CSV in Excel/other apps if it is open, or run from a writable folder.\n";
         return 1;
     }
     return 0;
