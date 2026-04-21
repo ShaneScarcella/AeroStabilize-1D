@@ -1,11 +1,17 @@
 #pragma once
 
+#include <vector>
 #include <string>
+
+struct Waypoint {
+    double time_s = 0.0;
+    double altitude_m = 0.0;
+};
 
 struct Config {
     double mass_kg = 0.0;
     double initial_altitude_m = 0.0;
-    double target_altitude_m = 0.0;
+    std::vector<Waypoint> waypoints;
     double dt_s = 0.0;
     int simulation_steps = 0;
 

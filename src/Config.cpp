@@ -1,5 +1,6 @@
 #include "Config.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <limits>
@@ -50,6 +51,25 @@ int parseInt(const std::string& key, const std::string& value) {
     }
 }
 
+Waypoint parseWaypoint(const std::string& value) {
+    const auto comma = value.find(',');
+    if (comma == std::string::npos) {
+        throw std::runtime_error("Config: invalid waypoint format, expected 'time_s, altitude_m': " +
+                                 value);
+    }
+
+    const std::string time_raw = trim(value.substr(0, comma));
+    const std::string altitude_raw = trim(value.substr(comma + 1));
+    if (time_raw.empty() || altitude_raw.empty()) {
+        throw std::runtime_error("Config: invalid waypoint format, expected non-empty time and altitude: " +
+                                 value);
+    }
+
+    const double time_s = parseDouble("waypoint.time_s", time_raw);
+    const double altitude_m = parseDouble("waypoint.altitude_m", altitude_raw);
+    return Waypoint{time_s, altitude_m};
+}
+
 }  // namespace
 
 // Loads and validates settings from a key=value file. Throws std::runtime_error on failure.
@@ -81,6 +101,9 @@ Config Config::loadFromFile(const std::string& path) {
         if (key.empty()) {
             throw std::runtime_error("Config: line " + std::to_string(line_no) + ": empty key");
         }
+        if (key == "waypoint") {
+            continue;
+        }
         if (raw.contains(key)) {
             throw std::runtime_error("Config: duplicate key '" + key + "' at line " +
                                      std::to_string(line_no));
@@ -99,7 +122,6 @@ Config Config::loadFromFile(const std::string& path) {
     Config c;
     c.mass_kg = parseDouble("mass_kg", require("mass_kg"));
     c.initial_altitude_m = parseDouble("initial_altitude_m", require("initial_altitude_m"));
-    c.target_altitude_m = parseDouble("target_altitude_m", require("target_altitude_m"));
     c.dt_s = parseDouble("dt_s", require("dt_s"));
     c.simulation_steps = parseInt("simulation_steps", require("simulation_steps"));
     c.pid_kp = parseDouble("pid_kp", require("pid_kp"));
@@ -127,6 +149,34 @@ Config Config::loadFromFile(const std::string& path) {
     c.gust_force_n = optionalDouble("gust_force_n", 0.0);
     c.gust_start_step = optionalInt("gust_start_step", 0);
     c.gust_duration_steps = optionalInt("gust_duration_steps", 0);
+
+    in.clear();
+    in.seekg(0);
+    line_no = 0;
+    while (std::getline(in, line)) {
+        ++line_no;
+        line = trim(line);
+        if (line.empty() || line[0] == '#') {
+            continue;
+        }
+
+        const auto eq = line.find('=');
+        if (eq == std::string::npos) {
+            continue;
+        }
+
+        const std::string key = trim(line.substr(0, eq));
+        const std::string value = trim(line.substr(eq + 1));
+        if (key == "waypoint") {
+            c.waypoints.push_back(parseWaypoint(value));
+        }
+    }
+
+    std::sort(c.waypoints.begin(), c.waypoints.end(),
+              [](const Waypoint& a, const Waypoint& b) { return a.time_s < b.time_s; });
+    if (c.waypoints.empty()) {
+        throw std::runtime_error("Config: at least one waypoint is required");
+    }
 
     if (c.mass_kg <= 0.0) {
         throw std::runtime_error("Config: mass_kg must be positive");

@@ -32,7 +32,7 @@ TEST(Config, InvalidNumberThrows) {
     const fs::path path = makeTempConfigPath();
     writeFile(path, R"(mass_kg = not_a_number
 initial_altitude_m = 0.0
-target_altitude_m = 1.0
+waypoint = 0.0, 1.0
 dt_s = 0.1
 simulation_steps = 10
 pid_kp = 1.0
@@ -51,7 +51,7 @@ TEST(Config, DuplicateKeyThrows) {
     writeFile(path, R"(mass_kg = 1.0
 mass_kg = 2.0
 initial_altitude_m = 0.0
-target_altitude_m = 1.0
+waypoint = 0.0, 1.0
 dt_s = 0.1
 simulation_steps = 10
 pid_kp = 1.0
@@ -70,7 +70,7 @@ TEST(Config, ValidFileLoads) {
     writeFile(path, R"(# comment
 mass_kg = 2.5
 initial_altitude_m = 1.0
-target_altitude_m = 10.0
+waypoint = 0.0, 10.0
 dt_s = 0.05
 simulation_steps = 100
 pid_kp = 3.0
@@ -83,7 +83,9 @@ telemetry_csv = flight.csv
     const Config c = Config::loadFromFile(path.string());
     EXPECT_NEAR(c.mass_kg, 2.5, 1e-12);
     EXPECT_NEAR(c.initial_altitude_m, 1.0, 1e-12);
-    EXPECT_NEAR(c.target_altitude_m, 10.0, 1e-12);
+    ASSERT_EQ(c.waypoints.size(), 1u);
+    EXPECT_NEAR(c.waypoints[0].time_s, 0.0, 1e-12);
+    EXPECT_NEAR(c.waypoints[0].altitude_m, 10.0, 1e-12);
     EXPECT_NEAR(c.dt_s, 0.05, 1e-12);
     EXPECT_EQ(c.simulation_steps, 100);
     EXPECT_NEAR(c.pid_kp, 3.0, 1e-12);
@@ -102,7 +104,7 @@ TEST(Config, OptionalGustKeysLoad) {
     const fs::path path = makeTempConfigPath();
     writeFile(path, R"(mass_kg = 2.0
 initial_altitude_m = 10.0
-target_altitude_m = 10.0
+waypoint = 0.0, 10.0
 dt_s = 0.1
 simulation_steps = 50
 pid_kp = 12.0
@@ -119,5 +121,49 @@ telemetry_csv = out.csv
     EXPECT_NEAR(c.gust_force_n, -10.0, 1e-12);
     EXPECT_EQ(c.gust_start_step, 5);
     EXPECT_EQ(c.gust_duration_steps, 3);
+    fs::remove(path);
+}
+
+TEST(Config, WaypointsAreParsedAndSortedChronologically) {
+    const fs::path path = makeTempConfigPath();
+    writeFile(path, R"(mass_kg = 1.0
+initial_altitude_m = 0.0
+waypoint = 3.0, 30.0
+waypoint = 0.0, 5.0
+waypoint = 1.5, 20.0
+dt_s = 0.1
+simulation_steps = 10
+pid_kp = 1.0
+pid_ki = 0.0
+pid_kd = 0.0
+pid_min_thrust_n = 0.0
+pid_max_thrust_n = 20.0
+telemetry_csv = out.csv
+)");
+    const Config c = Config::loadFromFile(path.string());
+    ASSERT_EQ(c.waypoints.size(), 3u);
+    EXPECT_NEAR(c.waypoints[0].time_s, 0.0, 1e-12);
+    EXPECT_NEAR(c.waypoints[0].altitude_m, 5.0, 1e-12);
+    EXPECT_NEAR(c.waypoints[1].time_s, 1.5, 1e-12);
+    EXPECT_NEAR(c.waypoints[1].altitude_m, 20.0, 1e-12);
+    EXPECT_NEAR(c.waypoints[2].time_s, 3.0, 1e-12);
+    EXPECT_NEAR(c.waypoints[2].altitude_m, 30.0, 1e-12);
+    fs::remove(path);
+}
+
+TEST(Config, EmptyWaypointListThrows) {
+    const fs::path path = makeTempConfigPath();
+    writeFile(path, R"(mass_kg = 1.0
+initial_altitude_m = 0.0
+dt_s = 0.1
+simulation_steps = 10
+pid_kp = 1.0
+pid_ki = 0.0
+pid_kd = 0.0
+pid_min_thrust_n = 0.0
+pid_max_thrust_n = 20.0
+telemetry_csv = out.csv
+)");
+    EXPECT_THROW((void)Config::loadFromFile(path.string()), std::runtime_error);
     fs::remove(path);
 }

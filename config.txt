@@ -2,7 +2,7 @@
 
 mass_kg = 2.0
 initial_altitude_m = 10.0
-target_altitude_m = 10.0
+waypoint = 0.0, 10.0
 dt_s = 0.1
 simulation_steps = 200
 

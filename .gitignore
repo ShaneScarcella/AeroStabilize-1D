@@ -15,6 +15,7 @@ out/
 # Cursor/VS Code
 .vscode/
 .cursor/
+.cursorrules
 
 # CMake
 CMakeCache.txt
