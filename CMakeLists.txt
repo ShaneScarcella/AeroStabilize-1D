@@ -9,6 +9,7 @@ add_library(aerostabilize_core STATIC
     src/PhysicsEngine.cpp
     src/PIDController.cpp
     src/TelemetryLogger.cpp
+    src/PerformanceAnalyzer.cpp
 )
 target_include_directories(aerostabilize_core PUBLIC ${CMAKE_SOURCE_DIR}/include)
 

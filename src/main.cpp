@@ -7,6 +7,7 @@
 #include "Config.hpp"
 #include "PhysicsEngine.hpp"
 #include "PIDController.hpp"
+#include "PerformanceAnalyzer.hpp"
 #include "TelemetryLogger.hpp"
 
 namespace {
@@ -71,6 +72,18 @@ int main(int argc, char* argv[]) {
                       << thrust << "\t\t"
                       << disturbance_n << "\n";
         }
+
+        PerformanceAnalyzer analyzer;
+        const FlightReport report = analyzer.generateReport(
+            telemetry.getTimes(), telemetry.getTargets(), telemetry.getAltitudes());
+
+        std::cout << "\nPerformance Report\n";
+        std::cout << "------------------\n";
+        std::cout << std::fixed << std::setprecision(4)
+                  << "Max overshoot (m):      " << report.max_overshoot_m << "\n"
+                  << "Settling time (s):      " << report.settling_time_s << "\n"
+                  << "Steady-state error (m): " << report.steady_state_error_m << "\n"
+                  << "RMSE (m):               " << report.rmse << "\n";
 
         std::cout << "Wrote " << cfg.telemetry_csv << "\n";
     } catch (const std::exception& e) {

@@ -20,6 +20,11 @@ TelemetryLogger::~TelemetryLogger() {
 
 void TelemetryLogger::logState(double time_s, double target_alt_m, double altitude_m,
                                double velocity_m_s, double thrust_n, double disturbance_n) {
+    // Keep an in-memory trace so analysis can run after simulation without reparsing CSV.
+    _times_s.push_back(time_s);
+    _targets_m.push_back(target_alt_m);
+    _altitudes_m.push_back(altitude_m);
+
     _file << std::fixed << std::setprecision(6)
           << time_s << ','
           << target_alt_m << ','
