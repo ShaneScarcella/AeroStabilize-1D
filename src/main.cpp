@@ -1,5 +1,7 @@
 #include <iostream>
 #include <iomanip>
+#include <optional>
+#include <random>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -38,8 +40,23 @@ int main(int argc, char* argv[]) {
 
         TelemetryLogger telemetry(cfg.telemetry_csv, cfg.system_log_level);
         telemetry.print(LogLevel::INFO, "Starting simulation");
-        telemetry.print(LogLevel::DEBUG, "Time(s)\tTarget\tAlt(m)\tVel(m/s)\tThrust(N)\tDist(N)");
-        telemetry.print(LogLevel::DEBUG, "-----------------------------------------------------------------------------");
+        telemetry.print(
+            LogLevel::DEBUG,
+            "Time(s)\tTarget\tAlt(m)\tSensed(m)\tVel(m/s)\tThrust(N)\tDist(N)");
+        telemetry.print(LogLevel::DEBUG,
+                        "-----------------------------------------------------------------------------"
+                        "-----");
+
+        // One RNG stream per run keeps the error sequence a single draw from the noise model. MSVC
+        // checks σ > 0 in debug when constructing std::normal_distribution, so a missing key or
+        // explicit 0.0 (noiseless sensor) must skip the distribution and add zero error instead.
+        std::random_device random_seed;
+        std::mt19937 rng(
+            static_cast<std::mt19937::result_type>(random_seed()));
+        std::optional<std::normal_distribution<double>> altitude_noise;
+        if (cfg.sensor_noise_stddev > 0.0) {
+            altitude_noise.emplace(0.0, cfg.sensor_noise_stddev);
+        }
 
         for (int i = 0; i < cfg.simulation_steps; ++i) {
             while (next_waypoint_index < cfg.waypoints.size() &&
@@ -54,9 +71,12 @@ int main(int argc, char* argv[]) {
                 ++next_waypoint_index;
             }
 
-            double current_altitude = drone.getAltitude();
-
-            double thrust = flightComputer.calculate(current_target_altitude, current_altitude, dt);
+            // Sample physics truth at the start of this tick; the controller only receives a
+            // perturbed view to model noisy sensors, and we log that same instant before integration.
+            const double true_altitude = drone.getAltitude();
+            const double true_velocity = drone.getVelocity();
+            const double noise_m = altitude_noise ? (*altitude_noise)(rng) : 0.0;
+            const double noisy_altitude = true_altitude + noise_m;
 
             double disturbance_n = 0.0;
             if (cfg.gust_force_n != 0.0 && cfg.gust_duration_steps > 0 &&
@@ -65,21 +85,25 @@ int main(int argc, char* argv[]) {
                 disturbance_n = cfg.gust_force_n;
             }
 
-            drone.update(thrust, disturbance_n, dt);
-            elapsed_time += dt;
+            const double thrust =
+                flightComputer.calculate(current_target_altitude, noisy_altitude, dt);
 
-            telemetry.logState(elapsed_time, current_target_altitude, drone.getAltitude(),
-                               drone.getVelocity(), thrust, disturbance_n);
+            telemetry.logState(elapsed_time, current_target_altitude, true_altitude, noisy_altitude,
+                               true_velocity, thrust, disturbance_n);
 
             std::ostringstream tick_row;
             tick_row << std::fixed << std::setprecision(2)
                      << elapsed_time << "\t"
                      << current_target_altitude << "\t"
-                     << drone.getAltitude() << "\t"
-                     << drone.getVelocity() << "\t\t"
+                     << true_altitude << "\t"
+                     << noisy_altitude << "\t"
+                     << true_velocity << "\t\t"
                      << thrust << "\t\t"
                      << disturbance_n;
             telemetry.print(LogLevel::DEBUG, tick_row.str());
+
+            drone.update(thrust, disturbance_n, dt);
+            elapsed_time += dt;
         }
 
         PerformanceAnalyzer analyzer;

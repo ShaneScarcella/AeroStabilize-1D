@@ -28,6 +28,9 @@ struct Config {
     int gust_start_step = 0;
     int gust_duration_steps = 0;
 
+    /** Standard deviation of zero-mean Gaussian error (m) on altitude used only by the simulated flight computer; omitted in config = perfect sensor. */
+    double sensor_noise_stddev = 0.0;
+
     LogLevel system_log_level = LogLevel::INFO;
     std::string telemetry_csv;
 

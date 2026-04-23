@@ -175,6 +175,7 @@ Config Config::loadFromFile(const std::string& path) {
     c.gust_force_n = optionalDouble("gust_force_n", 0.0);
     c.gust_start_step = optionalInt("gust_start_step", 0);
     c.gust_duration_steps = optionalInt("gust_duration_steps", 0);
+    c.sensor_noise_stddev = optionalDouble("sensor_noise_stddev", 0.0);
     c.system_log_level = parseLogLevelOrDefaultInfo(
         raw.contains("log_level") ? raw.at("log_level") : "INFO");
 
@@ -223,6 +224,11 @@ Config Config::loadFromFile(const std::string& path) {
     }
     if (c.gust_start_step < 0) {
         throw std::runtime_error("Config: gust_start_step must be >= 0");
+    }
+    if (c.sensor_noise_stddev < 0.0 || !std::isfinite(c.sensor_noise_stddev)) {
+        throw std::runtime_error(
+            "Config: sensor_noise_stddev must be non-negative and finite (std::normal_distribution "
+            "rejects a negative standard deviation)");
     }
 
     return c;

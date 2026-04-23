@@ -1,15 +1,15 @@
 # AeroStabilize-1D — edit this file and rerun the simulator (no recompile).
 
 mass_kg = 2.0
-initial_altitude_m = 10.0
+initial_altitude_m = 0.0
 waypoint = 0.0, 10.0
-waypoint = 3.0, 15.0
-waypoint = 7.0, 7.0
-waypoint = 11.0, 12.0
-waypoint = 15.0, 9.0
-waypoint = 19.0, 10.0
-dt_s = 0.01
-simulation_steps = 2500
+# waypoint = 3.0, 15.0
+# waypoint = 7.0, 7.0
+# waypoint = 11.0, 12.0
+# waypoint = 15.0, 9.0
+# waypoint = 19.0, 10.0
+dt_s = 0.1
+simulation_steps = 250
 
 # PID: output is thrust (N). I-term removes steady-state error at hover (mg).
 pid_kp = 12.0
@@ -19,9 +19,12 @@ pid_min_thrust_n = 0.0
 pid_max_thrust_n = 30.0
 
 # Wind gust: extra vertical force (N), positive up. Omitted keys = no gust.
-gust_force_n = -10.0
+gust_force_n = 0.0
 gust_start_step = 30
 gust_duration_steps = 20
+
+# Altitude sensor noise (m, std dev). Omit or 0 = perfect sensor. Positive values add N(0,σ) for the controller.
+sensor_noise_stddev = .05
 
 telemetry_csv = flight_data.csv
 log_level = DEBUG
