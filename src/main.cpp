@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <cstddef>
@@ -35,15 +36,21 @@ int main(int argc, char* argv[]) {
         double current_target_altitude = cfg.waypoints.front().altitude_m;
         std::size_t next_waypoint_index = 0;
 
-        TelemetryLogger telemetry(cfg.telemetry_csv);
-
-        std::cout << "Time(s)\tTarget\tAlt(m)\tVel(m/s)\tThrust(N)\tDist(N)\n";
-        std::cout << "-----------------------------------------------------------------------------\n";
+        TelemetryLogger telemetry(cfg.telemetry_csv, cfg.system_log_level);
+        telemetry.print(LogLevel::INFO, "Starting simulation");
+        telemetry.print(LogLevel::DEBUG, "Time(s)\tTarget\tAlt(m)\tVel(m/s)\tThrust(N)\tDist(N)");
+        telemetry.print(LogLevel::DEBUG, "-----------------------------------------------------------------------------");
 
         for (int i = 0; i < cfg.simulation_steps; ++i) {
             while (next_waypoint_index < cfg.waypoints.size() &&
                    elapsed_time >= cfg.waypoints[next_waypoint_index].time_s) {
                 current_target_altitude = cfg.waypoints[next_waypoint_index].altitude_m;
+                std::ostringstream waypoint_message;
+                waypoint_message << std::fixed << std::setprecision(2)
+                                 << "Crossed waypoint at t=" << cfg.waypoints[next_waypoint_index].time_s
+                                 << "s, target altitude now "
+                                 << current_target_altitude << " m";
+                telemetry.print(LogLevel::INFO, waypoint_message.str());
                 ++next_waypoint_index;
             }
 
@@ -64,28 +71,33 @@ int main(int argc, char* argv[]) {
             telemetry.logState(elapsed_time, current_target_altitude, drone.getAltitude(),
                                drone.getVelocity(), thrust, disturbance_n);
 
-            std::cout << std::fixed << std::setprecision(2)
-                      << elapsed_time << "\t"
-                      << current_target_altitude << "\t"
-                      << drone.getAltitude() << "\t"
-                      << drone.getVelocity() << "\t\t"
-                      << thrust << "\t\t"
-                      << disturbance_n << "\n";
+            std::ostringstream tick_row;
+            tick_row << std::fixed << std::setprecision(2)
+                     << elapsed_time << "\t"
+                     << current_target_altitude << "\t"
+                     << drone.getAltitude() << "\t"
+                     << drone.getVelocity() << "\t\t"
+                     << thrust << "\t\t"
+                     << disturbance_n;
+            telemetry.print(LogLevel::DEBUG, tick_row.str());
         }
 
         PerformanceAnalyzer analyzer;
         const FlightReport report = analyzer.generateReport(
             telemetry.getTimes(), telemetry.getTargets(), telemetry.getAltitudes());
 
-        std::cout << "\nPerformance Report\n";
-        std::cout << "------------------\n";
-        std::cout << std::fixed << std::setprecision(4)
-                  << "Max overshoot (m):      " << report.max_overshoot_m << "\n"
-                  << "Settling time (s):      " << report.settling_time_s << "\n"
-                  << "Steady-state error (m): " << report.steady_state_error_m << "\n"
-                  << "RMSE (m):               " << report.rmse << "\n";
+        telemetry.print(LogLevel::INFO, "");
+        telemetry.print(LogLevel::INFO, "Performance Report");
+        telemetry.print(LogLevel::INFO, "------------------");
+        std::ostringstream report_rows;
+        report_rows << std::fixed << std::setprecision(4)
+                    << "Max overshoot (m):      " << report.max_overshoot_m << "\n"
+                    << "Settling time (s):      " << report.settling_time_s << "\n"
+                    << "Steady-state error (m): " << report.steady_state_error_m << "\n"
+                    << "RMSE (m):               " << report.rmse;
+        telemetry.print(LogLevel::INFO, report_rows.str());
 
-        std::cout << "Wrote " << cfg.telemetry_csv << "\n";
+        telemetry.print(LogLevel::INFO, "Wrote " + cfg.telemetry_csv);
     } catch (const std::exception& e) {
         std::cerr << e.what() << "\n";
         std::cerr << "Hint: close the telemetry CSV in Excel/other apps if it is open, or run from a writable folder.\n";

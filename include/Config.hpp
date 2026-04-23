@@ -3,6 +3,8 @@
 #include <vector>
 #include <string>
 
+#include "TelemetryLogger.hpp"
+
 struct Waypoint {
     double time_s = 0.0;
     double altitude_m = 0.0;
@@ -26,6 +28,7 @@ struct Config {
     int gust_start_step = 0;
     int gust_duration_steps = 0;
 
+    LogLevel system_log_level = LogLevel::INFO;
     std::string telemetry_csv;
 
     /** Loads and validates settings from a key=value file. Throws std::runtime_error on failure. */

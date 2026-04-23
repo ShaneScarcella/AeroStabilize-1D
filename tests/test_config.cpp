@@ -124,6 +124,49 @@ telemetry_csv = out.csv
     fs::remove(path);
 }
 
+TEST(Config, LogLevelStringParsesWithSafeDefault) {
+    const fs::path path = makeTempConfigPath();
+    auto load_with_level = [&](const std::string& raw_level) -> LogLevel {
+        writeFile(path, "mass_kg = 2.0\n"
+                        "initial_altitude_m = 10.0\n"
+                        "waypoint = 0.0, 10.0\n"
+                        "dt_s = 0.1\n"
+                        "simulation_steps = 50\n"
+                        "pid_kp = 12.0\n"
+                        "pid_ki = 4.0\n"
+                        "pid_kd = 7.0\n"
+                        "pid_min_thrust_n = 0.0\n"
+                        "pid_max_thrust_n = 30.0\n"
+                        "telemetry_csv = out.csv\n"
+                        "log_level = " + raw_level + "\n");
+        return Config::loadFromFile(path.string()).system_log_level;
+    };
+
+    EXPECT_EQ(load_with_level("DEBUG"), LogLevel::DEBUG);
+    EXPECT_EQ(load_with_level("INFO"), LogLevel::INFO);
+    EXPECT_EQ(load_with_level("WARN"), LogLevel::WARN);
+    EXPECT_EQ(load_with_level("ERROR"), LogLevel::ERROR);
+    EXPECT_EQ(load_with_level("NONE"), LogLevel::NONE);
+    EXPECT_EQ(load_with_level("unknown"), LogLevel::INFO);
+
+    // Missing key should stay stable at INFO so old config files do not become noisy.
+    writeFile(path, R"(mass_kg = 2.0
+initial_altitude_m = 10.0
+waypoint = 0.0, 10.0
+dt_s = 0.1
+simulation_steps = 50
+pid_kp = 12.0
+pid_ki = 4.0
+pid_kd = 7.0
+pid_min_thrust_n = 0.0
+pid_max_thrust_n = 30.0
+telemetry_csv = out.csv
+)");
+    EXPECT_EQ(Config::loadFromFile(path.string()).system_log_level, LogLevel::INFO);
+
+    fs::remove(path);
+}
+
 TEST(Config, WaypointsAreParsedAndSortedChronologically) {
     const fs::path path = makeTempConfigPath();
     writeFile(path, R"(mass_kg = 1.0

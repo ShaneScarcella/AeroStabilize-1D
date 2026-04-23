@@ -1,10 +1,12 @@
 #include "TelemetryLogger.hpp"
 
 #include <iomanip>
+#include <iostream>
 #include <stdexcept>
 
-TelemetryLogger::TelemetryLogger(const std::string& filepath)
-    : _file(filepath, std::ios::out | std::ios::trunc) {
+TelemetryLogger::TelemetryLogger(const std::string& filepath, LogLevel system_log_level)
+    : _file(filepath, std::ios::out | std::ios::trunc),
+      _system_log_level(system_log_level) {
     if (!_file.is_open()) {
         throw std::runtime_error("TelemetryLogger: could not open " + filepath);
     }
@@ -33,4 +35,12 @@ void TelemetryLogger::logState(double time_s, double target_alt_m, double altitu
           << thrust_n << ','
           << disturbance_n << '\n';
     _file.flush();
+}
+
+void TelemetryLogger::print(LogLevel level, const std::string& message) const {
+    // Use one threshold gate for console output so verbosity can be tuned per run.
+    if (level == LogLevel::NONE || level < _system_log_level) {
+        return;
+    }
+    std::cout << message << '\n';
 }

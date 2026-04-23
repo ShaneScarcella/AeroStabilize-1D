@@ -1,6 +1,7 @@
 #include "Config.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <fstream>
 #include <limits>
@@ -68,6 +69,31 @@ Waypoint parseWaypoint(const std::string& value) {
     const double time_s = parseDouble("waypoint.time_s", time_raw);
     const double altitude_m = parseDouble("waypoint.altitude_m", altitude_raw);
     return Waypoint{time_s, altitude_m};
+}
+
+LogLevel parseLogLevelOrDefaultInfo(const std::string& raw_value) {
+    std::string normalized = trim(raw_value);
+    std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+
+    if (normalized == "DEBUG") {
+        return LogLevel::DEBUG;
+    }
+    if (normalized == "INFO") {
+        return LogLevel::INFO;
+    }
+    if (normalized == "WARN") {
+        return LogLevel::WARN;
+    }
+    if (normalized == "ERROR") {
+        return LogLevel::ERROR;
+    }
+    if (normalized == "NONE") {
+        return LogLevel::NONE;
+    }
+
+    // Falling back keeps older configs working while still allowing strict parsing elsewhere.
+    return LogLevel::INFO;
 }
 
 }  // namespace
@@ -149,6 +175,8 @@ Config Config::loadFromFile(const std::string& path) {
     c.gust_force_n = optionalDouble("gust_force_n", 0.0);
     c.gust_start_step = optionalInt("gust_start_step", 0);
     c.gust_duration_steps = optionalInt("gust_duration_steps", 0);
+    c.system_log_level = parseLogLevelOrDefaultInfo(
+        raw.contains("log_level") ? raw.at("log_level") : "INFO");
 
     in.clear();
     in.seekg(0);
