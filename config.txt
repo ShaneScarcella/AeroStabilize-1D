@@ -10,6 +10,8 @@ waypoint = 0.0, 10.0
 # waypoint = 19.0, 10.0
 dt_s = 0.1
 simulation_steps = 250
+# Wall-clock: 0 = as fast as possible, 1.0 = 1x real time (one dt per wall dt).
+realtime_multiplier = 1.0
 
 # PID: output is thrust (N). I-term removes steady-state error at hover (mg).
 pid_kp = 12.0

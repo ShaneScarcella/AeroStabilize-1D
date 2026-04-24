@@ -113,6 +113,7 @@ telemetry_csv = flight.csv
     EXPECT_NEAR(c.pid_min_thrust_n, 0.0, 1e-12);
     EXPECT_NEAR(c.pid_max_thrust_n, 25.0, 1e-12);
     EXPECT_EQ(c.telemetry_csv, "flight.csv");
+    EXPECT_NEAR(c.realtime_multiplier, 0.0, 1e-12);
     EXPECT_NEAR(c.gust_force_n, 0.0, 1e-12);
     EXPECT_EQ(c.gust_start_step, 0);
     EXPECT_EQ(c.gust_duration_steps, 0);

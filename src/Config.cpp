@@ -175,6 +175,7 @@ Config Config::loadFromFile(const std::string& path) {
     c.gust_force_n = optionalDouble("gust_force_n", 0.0);
     c.gust_start_step = optionalInt("gust_start_step", 0);
     c.gust_duration_steps = optionalInt("gust_duration_steps", 0);
+    c.realtime_multiplier = optionalDouble("realtime_multiplier", 0.0);
     c.sensor_noise_stddev = optionalDouble("sensor_noise_stddev", 0.0);
     c.system_log_level = parseLogLevelOrDefaultInfo(
         raw.contains("log_level") ? raw.at("log_level") : "INFO");
@@ -215,6 +216,9 @@ Config Config::loadFromFile(const std::string& path) {
     }
     if (c.simulation_steps <= 0) {
         throw std::runtime_error("Config: simulation_steps must be positive");
+    }
+    if (c.realtime_multiplier < 0.0 || !std::isfinite(c.realtime_multiplier)) {
+        throw std::runtime_error("Config: realtime_multiplier must be non-negative and finite");
     }
     if (c.pid_max_thrust_n < c.pid_min_thrust_n) {
         throw std::runtime_error("Config: pid_max_thrust_n must be >= pid_min_thrust_n");

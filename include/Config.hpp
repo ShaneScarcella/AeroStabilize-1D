@@ -16,6 +16,8 @@ struct Config {
     std::vector<Waypoint> waypoints;
     double dt_s = 0.0;
     int simulation_steps = 0;
+    /** When zero, no real-time pacing. When positive, wall delay per step is dt_s / realtime_multiplier. */
+    double realtime_multiplier = 0.0;
 
     double pid_kp = 0.0;
     double pid_ki = 0.0;

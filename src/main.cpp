@@ -1,3 +1,4 @@
+#include <chrono>
 #include <iostream>
 #include <iomanip>
 #include <optional>
@@ -5,6 +6,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <cstddef>
 
 #include "Config.hpp"
@@ -104,6 +106,12 @@ int main(int argc, char* argv[]) {
 
             drone.update(thrust, disturbance_n, dt);
             elapsed_time += dt;
+            if (cfg.realtime_multiplier > 0.0) {
+                const auto step_wall =
+                    std::chrono::duration<double>(dt / cfg.realtime_multiplier);
+                const auto as_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(step_wall);
+                std::this_thread::sleep_for(as_ns);
+            }
         }
 
         PerformanceAnalyzer analyzer;
