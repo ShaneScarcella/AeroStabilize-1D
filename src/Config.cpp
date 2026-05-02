@@ -189,6 +189,7 @@ Config Config::loadFromFile(const std::string& path) {
     c.gust_start_step = optionalInt("gust_start_step", 0);
     c.gust_duration_steps = optionalInt("gust_duration_steps", 0);
     c.realtime_multiplier = optionalDouble("realtime_multiplier", 0.0);
+    c.moment_of_inertia_kg_m2 = optionalDouble("moment_of_inertia_kg_m2", c.moment_of_inertia_kg_m2);
     c.sensor_noise_stddev = optionalDouble("sensor_noise_stddev", 0.0);
     c.system_log_level = parseLogLevelOrDefaultInfo(
         raw.contains("log_level") ? raw.at("log_level") : "INFO");
@@ -223,6 +224,9 @@ Config Config::loadFromFile(const std::string& path) {
 
     if (c.mass_kg <= 0.0) {
         throw std::runtime_error("Config: mass_kg must be positive");
+    }
+    if (c.moment_of_inertia_kg_m2 <= 0.0 || !std::isfinite(c.moment_of_inertia_kg_m2)) {
+        throw std::runtime_error("Config: moment_of_inertia_kg_m2 must be positive and finite");
     }
     if (c.dt_s <= 0.0 || !std::isfinite(c.dt_s)) {
         throw std::runtime_error("Config: dt_s must be a positive finite number");

@@ -1,20 +1,28 @@
 #pragma once
 
+#include "Vector2D.hpp"
+
 class PhysicsEngine {
 public:
-    PhysicsEngine(double mass, double initial_altitude = 0.0);
+    PhysicsEngine(double mass_kg, double moment_of_inertia_kg_m2, double initial_altitude_m = 0.0,
+                  double initial_pitch_rad = 0.0);
 
-    /** @param thrust_n vertical thrust (N), positive upward
-     *  @param disturbance_force_n extra vertical force from environment (N), positive upward; e.g. wind gust downward = negative */
-    double update(double thrust_n, double disturbance_force_n, double dt);
+    /** Planar rigid-body step: thrust and disturbance are in inertial XZ; pitch is measured from +Z toward +X. */
+    Vector2D update(double thrust_n, double torque_n_m, double disturbance_force_n, double dt);
 
-    double getAltitude() const;
-    double getVelocity() const;
+    Vector2D getPosition() const;
+    Vector2D getVelocity() const;
+    double getPitchRad() const;
+    double getPitchRateRadS() const;
 
 private:
-    const double _gravity = -9.81;
-    double _mass;
-    
-    double _altitude;
-    double _velocity;
+    static constexpr double kGravityMps2 = 9.81;
+
+    double _mass_kg;
+    double _moment_of_inertia_kg_m2;
+
+    Vector2D _position{};
+    Vector2D _velocity{};
+    double _pitch_rad = 0.0;
+    double _pitch_rate_rad_s = 0.0;
 };

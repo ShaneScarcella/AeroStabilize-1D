@@ -1,6 +1,7 @@
 # AeroStabilize-1D — edit this file and rerun the simulator (no recompile).
 
 mass_kg = 2.0
+moment_of_inertia_kg_m2 = 0.05
 initial_altitude_m = 0.0
 waypoint = 0.0, 0.0, 10.0
 # waypoint = 3.0, 0.0, 15.0

@@ -14,6 +14,8 @@ struct Waypoint {
 
 struct Config {
     double mass_kg = 0.0;
+    /** About-axis moment of inertia for pitch (kg·m²), used with aerodynamic torque in the planar model. */
+    double moment_of_inertia_kg_m2 = 0.05;
     double initial_altitude_m = 0.0;
     std::vector<Waypoint> waypoints;
     double dt_s = 0.0;

@@ -14,6 +14,7 @@
 #include "PIDController.hpp"
 #include "PerformanceAnalyzer.hpp"
 #include "TelemetryLogger.hpp"
+#include "Vector2D.hpp"
 
 namespace {
 
@@ -30,19 +31,21 @@ int main(int argc, char* argv[]) {
 
         const Config cfg = Config::loadFromFile(config_path);
 
-        PhysicsEngine drone(cfg.mass_kg, cfg.initial_altitude_m);
+        PhysicsEngine drone(cfg.mass_kg, cfg.moment_of_inertia_kg_m2, cfg.initial_altitude_m);
 
         PIDController flightComputer(cfg.pid_kp, cfg.pid_ki, cfg.pid_kd,
                                    cfg.pid_min_thrust_n, cfg.pid_max_thrust_n);
 
         const double dt = cfg.dt_s;
         double elapsed_time = 0.0;
-        // Vertical loop still commands altitude only; planar X is carried for the upcoming 2D model.
+        // Altitude setpoints only; planar X and pitch evolve but stay outside the PID loop for now.
         double current_target_altitude = cfg.waypoints.front().position.z;
         std::size_t next_waypoint_index = 0;
 
         TelemetryLogger telemetry(cfg.telemetry_csv, cfg.system_log_level);
         telemetry.print(LogLevel::INFO, "Starting simulation");
+
+        Vector2D integrated_position = drone.getPosition();
         telemetry.print(
             LogLevel::DEBUG,
             "Time(s)\tTarget\tAlt(m)\tSensed(m)\tVel(m/s)\tThrust(N)\tDist(N)");
@@ -75,10 +78,10 @@ int main(int argc, char* argv[]) {
                 ++next_waypoint_index;
             }
 
-            // Sample physics truth at the start of this tick; the controller only receives a
-            // perturbed view to model noisy sensors, and we log that same instant before integration.
-            const double true_altitude = drone.getAltitude();
-            const double true_velocity = drone.getVelocity();
+            // True altitude is integrated_position.z (initial pose before the first integration step).
+            // The altitude PID sees sensor noise on that value; logging captures the same sample for this tick.
+            const double true_altitude = integrated_position.z;
+            const double true_velocity = drone.getVelocity().z;
             const double noise_m = altitude_noise ? (*altitude_noise)(rng) : 0.0;
             const double noisy_altitude = true_altitude + noise_m;
 
@@ -106,7 +109,8 @@ int main(int argc, char* argv[]) {
                      << disturbance_n;
             telemetry.print(LogLevel::DEBUG, tick_row.str());
 
-            drone.update(thrust, disturbance_n, dt);
+            // Altitude control passes zero torque; thrust still resolves in XZ whenever pitch is non-zero.
+            integrated_position = drone.update(thrust, 0.0, disturbance_n, dt);
             elapsed_time += dt;
             if (cfg.realtime_multiplier > 0.0) {
                 const auto step_wall =
