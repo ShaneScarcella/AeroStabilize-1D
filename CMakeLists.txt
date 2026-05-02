@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(AeroStabilize-1D)
+project(AeroStabilize-2D)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,8 +13,8 @@ add_library(aerostabilize_core STATIC
 )
 target_include_directories(aerostabilize_core PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
-add_executable(AeroStabilize-1D src/main.cpp)
-target_link_libraries(AeroStabilize-1D PRIVATE aerostabilize_core)
+add_executable(AeroStabilize-2D src/main.cpp)
+target_link_libraries(AeroStabilize-2D PRIVATE aerostabilize_core)
 
 # Place config next to the executable so runs from the build directory work.
 configure_file(
