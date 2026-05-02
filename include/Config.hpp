@@ -4,10 +4,12 @@
 #include <string>
 
 #include "TelemetryLogger.hpp"
+#include "Vector2D.hpp"
 
 struct Waypoint {
     double time_s = 0.0;
-    double altitude_m = 0.0;
+    // Full planar pose is stored now so config stays stable when horizontal control lands; 1D flight still reads Z only.
+    Vector2D position{};
 };
 
 struct Config {

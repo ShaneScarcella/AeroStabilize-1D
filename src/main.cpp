@@ -37,7 +37,8 @@ int main(int argc, char* argv[]) {
 
         const double dt = cfg.dt_s;
         double elapsed_time = 0.0;
-        double current_target_altitude = cfg.waypoints.front().altitude_m;
+        // Vertical loop still commands altitude only; planar X is carried for the upcoming 2D model.
+        double current_target_altitude = cfg.waypoints.front().position.z;
         std::size_t next_waypoint_index = 0;
 
         TelemetryLogger telemetry(cfg.telemetry_csv, cfg.system_log_level);
@@ -63,7 +64,8 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < cfg.simulation_steps; ++i) {
             while (next_waypoint_index < cfg.waypoints.size() &&
                    elapsed_time >= cfg.waypoints[next_waypoint_index].time_s) {
-                current_target_altitude = cfg.waypoints[next_waypoint_index].altitude_m;
+                current_target_altitude =
+                    cfg.waypoints[next_waypoint_index].position.z;
                 std::ostringstream waypoint_message;
                 waypoint_message << std::fixed << std::setprecision(2)
                                  << "Crossed waypoint at t=" << cfg.waypoints[next_waypoint_index].time_s

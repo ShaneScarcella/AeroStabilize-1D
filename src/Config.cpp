@@ -53,22 +53,35 @@ int parseInt(const std::string& key, const std::string& value) {
 }
 
 Waypoint parseWaypoint(const std::string& value) {
-    const auto comma = value.find(',');
-    if (comma == std::string::npos) {
-        throw std::runtime_error("Config: invalid waypoint format, expected 'time_s, altitude_m': " +
+    const auto comma1 = value.find(',');
+    if (comma1 == std::string::npos) {
+        throw std::runtime_error(
+            "Config: invalid waypoint format, expected 'time_s, x_m, z_m' (comma-separated): " +
+            value);
+    }
+    const auto comma2 = value.find(',', comma1 + 1);
+    if (comma2 == std::string::npos) {
+        throw std::runtime_error(
+            "Config: invalid waypoint format, expected 'time_s, x_m, z_m' (three values): " + value);
+    }
+    // Ambiguous trailing fields would silently change meaning later, so reject instead of ignoring.
+    if (value.find(',', comma2 + 1) != std::string::npos) {
+        throw std::runtime_error("Config: invalid waypoint format, too many comma-separated fields: " +
                                  value);
     }
 
-    const std::string time_raw = trim(value.substr(0, comma));
-    const std::string altitude_raw = trim(value.substr(comma + 1));
-    if (time_raw.empty() || altitude_raw.empty()) {
-        throw std::runtime_error("Config: invalid waypoint format, expected non-empty time and altitude: " +
-                                 value);
+    const std::string time_raw = trim(value.substr(0, comma1));
+    const std::string x_raw = trim(value.substr(comma1 + 1, comma2 - comma1 - 1));
+    const std::string z_raw = trim(value.substr(comma2 + 1));
+    if (time_raw.empty() || x_raw.empty() || z_raw.empty()) {
+        throw std::runtime_error(
+            "Config: invalid waypoint format, expected non-empty time, x, and z fields: " + value);
     }
 
     const double time_s = parseDouble("waypoint.time_s", time_raw);
-    const double altitude_m = parseDouble("waypoint.altitude_m", altitude_raw);
-    return Waypoint{time_s, altitude_m};
+    const double x_m = parseDouble("waypoint.position.x_m", x_raw);
+    const double z_m = parseDouble("waypoint.position.z_m", z_raw);
+    return Waypoint{time_s, Vector2D{x_m, z_m}};
 }
 
 LogLevel parseLogLevelOrDefaultInfo(const std::string& raw_value) {

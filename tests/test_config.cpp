@@ -32,7 +32,7 @@ TEST(Config, NegativeSensorNoiseStddevThrows) {
     const fs::path path = makeTempConfigPath();
     writeFile(path, R"(mass_kg = 1.0
 initial_altitude_m = 0.0
-waypoint = 0.0, 1.0
+waypoint = 0.0, 0.0, 1.0
 dt_s = 0.1
 simulation_steps = 10
 pid_kp = 1.0
@@ -51,7 +51,7 @@ TEST(Config, InvalidNumberThrows) {
     const fs::path path = makeTempConfigPath();
     writeFile(path, R"(mass_kg = not_a_number
 initial_altitude_m = 0.0
-waypoint = 0.0, 1.0
+waypoint = 0.0, 0.0, 1.0
 dt_s = 0.1
 simulation_steps = 10
 pid_kp = 1.0
@@ -70,7 +70,7 @@ TEST(Config, DuplicateKeyThrows) {
     writeFile(path, R"(mass_kg = 1.0
 mass_kg = 2.0
 initial_altitude_m = 0.0
-waypoint = 0.0, 1.0
+waypoint = 0.0, 0.0, 1.0
 dt_s = 0.1
 simulation_steps = 10
 pid_kp = 1.0
@@ -89,7 +89,7 @@ TEST(Config, ValidFileLoads) {
     writeFile(path, R"(# comment
 mass_kg = 2.5
 initial_altitude_m = 1.0
-waypoint = 0.0, 10.0
+waypoint = 0.0, 0.0, 10.0
 dt_s = 0.05
 simulation_steps = 100
 pid_kp = 3.0
@@ -104,7 +104,8 @@ telemetry_csv = flight.csv
     EXPECT_NEAR(c.initial_altitude_m, 1.0, 1e-12);
     ASSERT_EQ(c.waypoints.size(), 1u);
     EXPECT_NEAR(c.waypoints[0].time_s, 0.0, 1e-12);
-    EXPECT_NEAR(c.waypoints[0].altitude_m, 10.0, 1e-12);
+    EXPECT_NEAR(c.waypoints[0].position.x, 0.0, 1e-12);
+    EXPECT_NEAR(c.waypoints[0].position.z, 10.0, 1e-12);
     EXPECT_NEAR(c.dt_s, 0.05, 1e-12);
     EXPECT_EQ(c.simulation_steps, 100);
     EXPECT_NEAR(c.pid_kp, 3.0, 1e-12);
@@ -125,7 +126,7 @@ TEST(Config, SensorNoiseStddevKeyLoads) {
     const fs::path path = makeTempConfigPath();
     writeFile(path, R"(mass_kg = 2.0
 initial_altitude_m = 10.0
-waypoint = 0.0, 10.0
+waypoint = 0.0, 0.0, 10.0
 dt_s = 0.1
 simulation_steps = 50
 pid_kp = 12.0
@@ -145,7 +146,7 @@ TEST(Config, OptionalGustKeysLoad) {
     const fs::path path = makeTempConfigPath();
     writeFile(path, R"(mass_kg = 2.0
 initial_altitude_m = 10.0
-waypoint = 0.0, 10.0
+waypoint = 0.0, 0.0, 10.0
 dt_s = 0.1
 simulation_steps = 50
 pid_kp = 12.0
@@ -170,7 +171,7 @@ TEST(Config, LogLevelStringParsesWithSafeDefault) {
     auto load_with_level = [&](const std::string& raw_level) -> LogLevel {
         writeFile(path, "mass_kg = 2.0\n"
                         "initial_altitude_m = 10.0\n"
-                        "waypoint = 0.0, 10.0\n"
+                        "waypoint = 0.0, 0.0, 10.0\n"
                         "dt_s = 0.1\n"
                         "simulation_steps = 50\n"
                         "pid_kp = 12.0\n"
@@ -193,7 +194,7 @@ TEST(Config, LogLevelStringParsesWithSafeDefault) {
     // Missing key should stay stable at INFO so old config files do not become noisy.
     writeFile(path, R"(mass_kg = 2.0
 initial_altitude_m = 10.0
-waypoint = 0.0, 10.0
+waypoint = 0.0, 0.0, 10.0
 dt_s = 0.1
 simulation_steps = 50
 pid_kp = 12.0
@@ -212,9 +213,9 @@ TEST(Config, WaypointsAreParsedAndSortedChronologically) {
     const fs::path path = makeTempConfigPath();
     writeFile(path, R"(mass_kg = 1.0
 initial_altitude_m = 0.0
-waypoint = 3.0, 30.0
-waypoint = 0.0, 5.0
-waypoint = 1.5, 20.0
+waypoint = 3.0, 0.0, 30.0
+waypoint = 0.0, 0.0, 5.0
+waypoint = 1.5, 0.0, 20.0
 dt_s = 0.1
 simulation_steps = 10
 pid_kp = 1.0
@@ -227,11 +228,14 @@ telemetry_csv = out.csv
     const Config c = Config::loadFromFile(path.string());
     ASSERT_EQ(c.waypoints.size(), 3u);
     EXPECT_NEAR(c.waypoints[0].time_s, 0.0, 1e-12);
-    EXPECT_NEAR(c.waypoints[0].altitude_m, 5.0, 1e-12);
+    EXPECT_NEAR(c.waypoints[0].position.x, 0.0, 1e-12);
+    EXPECT_NEAR(c.waypoints[0].position.z, 5.0, 1e-12);
     EXPECT_NEAR(c.waypoints[1].time_s, 1.5, 1e-12);
-    EXPECT_NEAR(c.waypoints[1].altitude_m, 20.0, 1e-12);
+    EXPECT_NEAR(c.waypoints[1].position.x, 0.0, 1e-12);
+    EXPECT_NEAR(c.waypoints[1].position.z, 20.0, 1e-12);
     EXPECT_NEAR(c.waypoints[2].time_s, 3.0, 1e-12);
-    EXPECT_NEAR(c.waypoints[2].altitude_m, 30.0, 1e-12);
+    EXPECT_NEAR(c.waypoints[2].position.x, 0.0, 1e-12);
+    EXPECT_NEAR(c.waypoints[2].position.z, 30.0, 1e-12);
     fs::remove(path);
 }
 
