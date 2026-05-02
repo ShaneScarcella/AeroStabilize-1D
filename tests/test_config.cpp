@@ -35,9 +35,9 @@ initial_altitude_m = 0.0
 waypoint = 0.0, 0.0, 1.0
 dt_s = 0.1
 simulation_steps = 10
-pid_kp = 1.0
-pid_ki = 0.0
-pid_kd = 0.0
+alt_kp = 1.0
+alt_ki = 0.0
+alt_kd = 0.0
 pid_min_thrust_n = 0.0
 pid_max_thrust_n = 10.0
 sensor_noise_stddev = -0.1
@@ -54,9 +54,9 @@ initial_altitude_m = 0.0
 waypoint = 0.0, 0.0, 1.0
 dt_s = 0.1
 simulation_steps = 10
-pid_kp = 1.0
-pid_ki = 0.0
-pid_kd = 0.0
+alt_kp = 1.0
+alt_ki = 0.0
+alt_kd = 0.0
 pid_min_thrust_n = 0.0
 pid_max_thrust_n = 10.0
 telemetry_csv = out.csv
@@ -73,9 +73,9 @@ initial_altitude_m = 0.0
 waypoint = 0.0, 0.0, 1.0
 dt_s = 0.1
 simulation_steps = 10
-pid_kp = 1.0
-pid_ki = 0.0
-pid_kd = 0.0
+alt_kp = 1.0
+alt_ki = 0.0
+alt_kd = 0.0
 pid_min_thrust_n = 0.0
 pid_max_thrust_n = 10.0
 telemetry_csv = out.csv
@@ -92,9 +92,9 @@ initial_altitude_m = 1.0
 waypoint = 0.0, 0.0, 10.0
 dt_s = 0.05
 simulation_steps = 100
-pid_kp = 3.0
-pid_ki = 0.5
-pid_kd = 1.0
+alt_kp = 3.0
+alt_ki = 0.5
+alt_kd = 1.0
 pid_min_thrust_n = 0.0
 pid_max_thrust_n = 25.0
 telemetry_csv = flight.csv
@@ -108,9 +108,11 @@ telemetry_csv = flight.csv
     EXPECT_NEAR(c.waypoints[0].position.z, 10.0, 1e-12);
     EXPECT_NEAR(c.dt_s, 0.05, 1e-12);
     EXPECT_EQ(c.simulation_steps, 100);
-    EXPECT_NEAR(c.pid_kp, 3.0, 1e-12);
-    EXPECT_NEAR(c.pid_ki, 0.5, 1e-12);
-    EXPECT_NEAR(c.pid_kd, 1.0, 1e-12);
+    EXPECT_NEAR(c.alt_kp, 3.0, 1e-12);
+    EXPECT_NEAR(c.alt_ki, 0.5, 1e-12);
+    EXPECT_NEAR(c.alt_kd, 1.0, 1e-12);
+    EXPECT_NEAR(c.pitch_kp, 5.0, 1e-12);
+    EXPECT_NEAR(c.pos_kp, 0.1, 1e-12);
     EXPECT_NEAR(c.pid_min_thrust_n, 0.0, 1e-12);
     EXPECT_NEAR(c.pid_max_thrust_n, 25.0, 1e-12);
     EXPECT_EQ(c.telemetry_csv, "flight.csv");
@@ -130,9 +132,9 @@ initial_altitude_m = 10.0
 waypoint = 0.0, 0.0, 10.0
 dt_s = 0.1
 simulation_steps = 50
-pid_kp = 12.0
-pid_ki = 4.0
-pid_kd = 7.0
+alt_kp = 12.0
+alt_ki = 4.0
+alt_kd = 7.0
 pid_min_thrust_n = 0.0
 pid_max_thrust_n = 30.0
 sensor_noise_stddev = 0.15
@@ -150,9 +152,9 @@ initial_altitude_m = 10.0
 waypoint = 0.0, 0.0, 10.0
 dt_s = 0.1
 simulation_steps = 50
-pid_kp = 12.0
-pid_ki = 4.0
-pid_kd = 7.0
+alt_kp = 12.0
+alt_ki = 4.0
+alt_kd = 7.0
 pid_min_thrust_n = 0.0
 pid_max_thrust_n = 30.0
 gust_force_n = -10.0
@@ -175,9 +177,9 @@ TEST(Config, LogLevelStringParsesWithSafeDefault) {
                         "waypoint = 0.0, 0.0, 10.0\n"
                         "dt_s = 0.1\n"
                         "simulation_steps = 50\n"
-                        "pid_kp = 12.0\n"
-                        "pid_ki = 4.0\n"
-                        "pid_kd = 7.0\n"
+                        "alt_kp = 12.0\n"
+                        "alt_ki = 4.0\n"
+                        "alt_kd = 7.0\n"
                         "pid_min_thrust_n = 0.0\n"
                         "pid_max_thrust_n = 30.0\n"
                         "telemetry_csv = out.csv\n"
@@ -198,9 +200,9 @@ initial_altitude_m = 10.0
 waypoint = 0.0, 0.0, 10.0
 dt_s = 0.1
 simulation_steps = 50
-pid_kp = 12.0
-pid_ki = 4.0
-pid_kd = 7.0
+alt_kp = 12.0
+alt_ki = 4.0
+alt_kd = 7.0
 pid_min_thrust_n = 0.0
 pid_max_thrust_n = 30.0
 telemetry_csv = out.csv
@@ -219,9 +221,9 @@ waypoint = 0.0, 0.0, 5.0
 waypoint = 1.5, 0.0, 20.0
 dt_s = 0.1
 simulation_steps = 10
-pid_kp = 1.0
-pid_ki = 0.0
-pid_kd = 0.0
+alt_kp = 1.0
+alt_ki = 0.0
+alt_kd = 0.0
 pid_min_thrust_n = 0.0
 pid_max_thrust_n = 20.0
 telemetry_csv = out.csv
@@ -246,9 +248,9 @@ TEST(Config, EmptyWaypointListThrows) {
 initial_altitude_m = 0.0
 dt_s = 0.1
 simulation_steps = 10
-pid_kp = 1.0
-pid_ki = 0.0
-pid_kd = 0.0
+alt_kp = 1.0
+alt_ki = 0.0
+alt_kd = 0.0
 pid_min_thrust_n = 0.0
 pid_max_thrust_n = 20.0
 telemetry_csv = out.csv

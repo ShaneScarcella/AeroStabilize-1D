@@ -23,11 +23,23 @@ struct Config {
     /** When zero, no real-time pacing. When positive, wall delay per step is dt_s / realtime_multiplier. */
     double realtime_multiplier = 0.0;
 
-    double pid_kp = 0.0;
-    double pid_ki = 0.0;
-    double pid_kd = 0.0;
+    double alt_kp = 0.0;
+    double alt_ki = 0.0;
+    double alt_kd = 0.0;
     double pid_min_thrust_n = 0.0;
     double pid_max_thrust_n = 0.0;
+
+    /** Inner attitude loop: torque (N·m) from pitch error; defaults match typical small-quad tuning. */
+    double pitch_kp = 5.0;
+    double pitch_ki = 0.0;
+    double pitch_kd = 1.0;
+    double pitch_max_torque_n_m = 1.0;
+
+    /** Outer horizontal loop: desired pitch (rad) from X position error; saturates to ±pos_max_pitch_rad. */
+    double pos_kp = 0.1;
+    double pos_ki = 0.0;
+    double pos_kd = 0.1;
+    double pos_max_pitch_rad = 0.5;
 
     /** Optional wind / disturbance: constant force (N) for gust_duration_steps starting at gust_start_step (0-based). Zero gust_force_n or duration disables. */
     double gust_force_n = 0.0;

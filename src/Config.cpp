@@ -163,9 +163,9 @@ Config Config::loadFromFile(const std::string& path) {
     c.initial_altitude_m = parseDouble("initial_altitude_m", require("initial_altitude_m"));
     c.dt_s = parseDouble("dt_s", require("dt_s"));
     c.simulation_steps = parseInt("simulation_steps", require("simulation_steps"));
-    c.pid_kp = parseDouble("pid_kp", require("pid_kp"));
-    c.pid_ki = parseDouble("pid_ki", require("pid_ki"));
-    c.pid_kd = parseDouble("pid_kd", require("pid_kd"));
+    c.alt_kp = parseDouble("alt_kp", require("alt_kp"));
+    c.alt_ki = parseDouble("alt_ki", require("alt_ki"));
+    c.alt_kd = parseDouble("alt_kd", require("alt_kd"));
     c.pid_min_thrust_n = parseDouble("pid_min_thrust_n", require("pid_min_thrust_n"));
     c.pid_max_thrust_n = parseDouble("pid_max_thrust_n", require("pid_max_thrust_n"));
     c.telemetry_csv = require("telemetry_csv");
@@ -191,6 +191,15 @@ Config Config::loadFromFile(const std::string& path) {
     c.realtime_multiplier = optionalDouble("realtime_multiplier", 0.0);
     c.moment_of_inertia_kg_m2 = optionalDouble("moment_of_inertia_kg_m2", c.moment_of_inertia_kg_m2);
     c.sensor_noise_stddev = optionalDouble("sensor_noise_stddev", 0.0);
+
+    c.pitch_kp = optionalDouble("pitch_kp", c.pitch_kp);
+    c.pitch_ki = optionalDouble("pitch_ki", c.pitch_ki);
+    c.pitch_kd = optionalDouble("pitch_kd", c.pitch_kd);
+    c.pitch_max_torque_n_m = optionalDouble("pitch_max_torque_n_m", c.pitch_max_torque_n_m);
+    c.pos_kp = optionalDouble("pos_kp", c.pos_kp);
+    c.pos_ki = optionalDouble("pos_ki", c.pos_ki);
+    c.pos_kd = optionalDouble("pos_kd", c.pos_kd);
+    c.pos_max_pitch_rad = optionalDouble("pos_max_pitch_rad", c.pos_max_pitch_rad);
     c.system_log_level = parseLogLevelOrDefaultInfo(
         raw.contains("log_level") ? raw.at("log_level") : "INFO");
 
@@ -250,6 +259,12 @@ Config Config::loadFromFile(const std::string& path) {
         throw std::runtime_error(
             "Config: sensor_noise_stddev must be non-negative and finite (std::normal_distribution "
             "rejects a negative standard deviation)");
+    }
+    if (c.pitch_max_torque_n_m < 0.0 || !std::isfinite(c.pitch_max_torque_n_m)) {
+        throw std::runtime_error("Config: pitch_max_torque_n_m must be non-negative and finite");
+    }
+    if (c.pos_max_pitch_rad < 0.0 || !std::isfinite(c.pos_max_pitch_rad)) {
+        throw std::runtime_error("Config: pos_max_pitch_rad must be non-negative and finite");
     }
 
     return c;

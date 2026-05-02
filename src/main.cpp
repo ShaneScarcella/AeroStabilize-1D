@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <iostream>
 #include <iomanip>
 #include <optional>
@@ -33,13 +35,19 @@ int main(int argc, char* argv[]) {
 
         PhysicsEngine drone(cfg.mass_kg, cfg.moment_of_inertia_kg_m2, cfg.initial_altitude_m);
 
-        PIDController flightComputer(cfg.pid_kp, cfg.pid_ki, cfg.pid_kd,
-                                   cfg.pid_min_thrust_n, cfg.pid_max_thrust_n);
+        // Cascaded architecture: outer X-position loop → desired pitch; inner pitch loop → torque;
+        // altitude loop runs in parallel and commands total body thrust (with tilt compensation).
+        PIDController alt_pid(cfg.alt_kp, cfg.alt_ki, cfg.alt_kd, cfg.pid_min_thrust_n,
+                              cfg.pid_max_thrust_n);
+        PIDController pos_pid(cfg.pos_kp, cfg.pos_ki, cfg.pos_kd, -cfg.pos_max_pitch_rad,
+                              cfg.pos_max_pitch_rad);
+        PIDController pitch_pid(cfg.pitch_kp, cfg.pitch_ki, cfg.pitch_kd,
+                                -cfg.pitch_max_torque_n_m, cfg.pitch_max_torque_n_m);
 
         const double dt = cfg.dt_s;
         double elapsed_time = 0.0;
-        // Altitude setpoints only; planar X and pitch evolve but stay outside the PID loop for now.
         double current_target_altitude = cfg.waypoints.front().position.z;
+        double current_target_x = cfg.waypoints.front().position.x;
         std::size_t next_waypoint_index = 0;
 
         TelemetryLogger telemetry(cfg.telemetry_csv, cfg.system_log_level);
@@ -69,6 +77,7 @@ int main(int argc, char* argv[]) {
                    elapsed_time >= cfg.waypoints[next_waypoint_index].time_s) {
                 current_target_altitude =
                     cfg.waypoints[next_waypoint_index].position.z;
+                current_target_x = cfg.waypoints[next_waypoint_index].position.x;
                 std::ostringstream waypoint_message;
                 waypoint_message << std::fixed << std::setprecision(2)
                                  << "Crossed waypoint at t=" << cfg.waypoints[next_waypoint_index].time_s
@@ -92,8 +101,26 @@ int main(int argc, char* argv[]) {
                 disturbance_n = cfg.gust_force_n;
             }
 
-            const double thrust =
-                flightComputer.calculate(current_target_altitude, noisy_altitude, dt);
+            const double pitch_rad = drone.getPitchRad();
+
+            // Outer loop (horizontal position): X error → desired pitch; +X error requires +pitch (nose toward +X).
+            const double desired_pitch_rad =
+                pos_pid.calculate(current_target_x, drone.getPosition().x, dt);
+
+            // Inner loop (pitch attitude): pitch error → aerodynamic / control torque about body Y (planar model).
+            const double torque_n_m =
+                pitch_pid.calculate(desired_pitch_rad, pitch_rad, dt);
+
+            // Altitude loop: Z error → body-axis thrust from alt PID; divide by cos(pitch) so vertical lift matches demand when tilted.
+            const double alt_thrust_body_n =
+                alt_pid.calculate(current_target_altitude, noisy_altitude, dt);
+            constexpr double kMinAbsCos = 1e-5;
+            const double cos_pitch = std::cos(pitch_rad);
+            const double cos_safe =
+                std::abs(cos_pitch) < kMinAbsCos ? (cos_pitch >= 0.0 ? kMinAbsCos : -kMinAbsCos)
+                                                  : cos_pitch;
+            double thrust = alt_thrust_body_n / cos_safe;
+            thrust = std::clamp(thrust, cfg.pid_min_thrust_n, cfg.pid_max_thrust_n);
 
             telemetry.logState(elapsed_time, current_target_altitude, true_altitude, noisy_altitude,
                                true_velocity, thrust, disturbance_n);
@@ -109,8 +136,7 @@ int main(int argc, char* argv[]) {
                      << disturbance_n;
             telemetry.print(LogLevel::DEBUG, tick_row.str());
 
-            // Altitude control passes zero torque; thrust still resolves in XZ whenever pitch is non-zero.
-            integrated_position = drone.update(thrust, 0.0, disturbance_n, dt);
+            integrated_position = drone.update(thrust, torque_n_m, disturbance_n, dt);
             elapsed_time += dt;
             if (cfg.realtime_multiplier > 0.0) {
                 const auto step_wall =
