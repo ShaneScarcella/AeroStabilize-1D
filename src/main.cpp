@@ -54,7 +54,6 @@ int main(int argc, char* argv[]) {
         TelemetryLogger telemetry(cfg.telemetry_csv, cfg.system_log_level);
         telemetry.print(LogLevel::INFO, "Starting simulation");
 
-        Vector2D integrated_position = drone.getPosition();
         telemetry.print(LogLevel::DEBUG,
                         "Time(s)\tTgtX\tTgtZ\tTrueX\tTrueZ\tSensZ\tVelX\tVelZ\tPitchDeg\t"
                         "Thrust\tTorque\tDist");
@@ -73,6 +72,11 @@ int main(int argc, char* argv[]) {
             altitude_noise.emplace(0.0, cfg.sensor_noise_stddev);
         }
 
+        // Horizontal and vertical position filters start at the initial pose so the first EMA outputs
+        // match the first noisy samples when the drone begins at rest at the configured altitude.
+        double filtered_x = drone.getPosition().x;
+        double filtered_z = drone.getPosition().z;
+
         for (int i = 0; i < cfg.simulation_steps; ++i) {
             while (next_waypoint_index < cfg.waypoints.size() &&
                    elapsed_time >= cfg.waypoints[next_waypoint_index].time_s) {
@@ -88,11 +92,24 @@ int main(int argc, char* argv[]) {
                 ++next_waypoint_index;
             }
 
-            // True altitude is integrated_position.z (initial pose before the first integration step).
-            // The altitude PID sees sensor noise on that value; logging captures the same sample for this tick.
-            const double true_altitude = integrated_position.z;
-            const double noise_m = altitude_noise ? (*altitude_noise)(rng) : 0.0;
-            const double noisy_altitude = true_altitude + noise_m;
+            const Vector2D true_pos = drone.getPosition();
+            const double pitch_rad = drone.getPitchRad();
+
+            // Altitude uses the configured Gaussian error model; horizontal position and pitch are taken as
+            // noise-free here so the single σ knob continues to mean altitude uncertainty only.
+            const double noise_z_m = altitude_noise ? (*altitude_noise)(rng) : 0.0;
+            const double noisy_x = true_pos.x;
+            const double noisy_z = true_pos.z + noise_z_m;
+
+            // First-order low-pass (EMA) on measured horizontal and vertical position reduces altitude
+            // and X noise before the outer loops. Pitch is not low-passed: blending attitude would add
+            // phase lag in the inner loop and hurt stability, so the attitude PID always sees the
+            // current body pitch from the simulation.
+            filtered_x =
+                cfg.filter_alpha * noisy_x + (1.0 - cfg.filter_alpha) * filtered_x;
+            filtered_z =
+                cfg.filter_alpha * noisy_z + (1.0 - cfg.filter_alpha) * filtered_z;
+            const double filtered_pitch_rad = pitch_rad;
 
             double disturbance_n = 0.0;
             if (cfg.gust_force_n != 0.0 && cfg.gust_duration_steps > 0 &&
@@ -101,19 +118,17 @@ int main(int argc, char* argv[]) {
                 disturbance_n = cfg.gust_force_n;
             }
 
-            const double pitch_rad = drone.getPitchRad();
-
             // Outer loop (horizontal position): X error → desired pitch; +X error requires +pitch (nose toward +X).
             const double desired_pitch_rad =
-                pos_pid.calculate(current_target_x, drone.getPosition().x, dt);
+                pos_pid.calculate(current_target_x, filtered_x, dt);
 
             // Inner loop (pitch attitude): pitch error → aerodynamic / control torque about body Y (planar model).
             const double torque_n_m =
-                pitch_pid.calculate(desired_pitch_rad, pitch_rad, dt);
+                pitch_pid.calculate(desired_pitch_rad, filtered_pitch_rad, dt);
 
             // Altitude loop: Z error → body-axis thrust from alt PID; divide by cos(pitch) so vertical lift matches demand when tilted.
             const double alt_thrust_body_n =
-                alt_pid.calculate(current_target_altitude, noisy_altitude, dt);
+                alt_pid.calculate(current_target_altitude, filtered_z, dt);
             constexpr double kMinAbsCos = 1e-5;
             const double cos_pitch = std::cos(pitch_rad);
             const double cos_safe =
@@ -123,9 +138,8 @@ int main(int argc, char* argv[]) {
             thrust = std::clamp(thrust, cfg.pid_min_thrust_n, cfg.pid_max_thrust_n);
 
             const Vector2D target_pos{current_target_x, current_target_altitude};
-            const Vector2D true_pos = drone.getPosition();
             const Vector2D velocity = drone.getVelocity();
-            telemetry.logState(elapsed_time, target_pos, true_pos, noisy_altitude, velocity,
+            telemetry.logState(elapsed_time, target_pos, true_pos, noisy_z, velocity,
                                pitch_rad, thrust, torque_n_m, disturbance_n);
 
             const double pitch_deg = pitch_rad * (180.0 / std::numbers::pi_v<double>);
@@ -136,7 +150,7 @@ int main(int argc, char* argv[]) {
                      << target_pos.z << "\t"
                      << true_pos.x << "\t"
                      << true_pos.z << "\t"
-                     << noisy_altitude << "\t"
+                     << noisy_z << "\t"
                      << velocity.x << "\t"
                      << velocity.z << "\t"
                      << pitch_deg << "\t"
@@ -145,7 +159,7 @@ int main(int argc, char* argv[]) {
                      << disturbance_n;
             telemetry.print(LogLevel::DEBUG, tick_row.str());
 
-            integrated_position = drone.update(thrust, torque_n_m, disturbance_n, dt);
+            drone.update(thrust, torque_n_m, disturbance_n, dt);
             elapsed_time += dt;
             if (cfg.realtime_multiplier > 0.0) {
                 const auto step_wall =

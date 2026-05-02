@@ -39,5 +39,8 @@ gust_duration_steps = 20
 # Altitude sensor noise (m, std dev). Omit or 0 = perfect sensor. Positive values add N(0,σ) for the controller.
 sensor_noise_stddev = .05
 
+# EMA sensor smoothing: blend factor on each new noisy sample; must be in (0, 1]. Use 1.0 to disable smoothing.
+filter_alpha = 0.85
+
 telemetry_csv = flight_data.csv
 log_level = DEBUG

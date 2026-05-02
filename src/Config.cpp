@@ -191,6 +191,7 @@ Config Config::loadFromFile(const std::string& path) {
     c.realtime_multiplier = optionalDouble("realtime_multiplier", 0.0);
     c.moment_of_inertia_kg_m2 = optionalDouble("moment_of_inertia_kg_m2", c.moment_of_inertia_kg_m2);
     c.sensor_noise_stddev = optionalDouble("sensor_noise_stddev", 0.0);
+    c.filter_alpha = optionalDouble("filter_alpha", 1.0);
 
     c.pitch_kp = optionalDouble("pitch_kp", c.pitch_kp);
     c.pitch_ki = optionalDouble("pitch_ki", c.pitch_ki);
@@ -259,6 +260,11 @@ Config Config::loadFromFile(const std::string& path) {
         throw std::runtime_error(
             "Config: sensor_noise_stddev must be non-negative and finite (std::normal_distribution "
             "rejects a negative standard deviation)");
+    }
+    if (c.filter_alpha <= 0.0 || c.filter_alpha > 1.0 || !std::isfinite(c.filter_alpha)) {
+        throw std::runtime_error(
+            "Config: filter_alpha must be finite and in (0, 1] (exclusive lower bound, inclusive "
+            "upper bound)");
     }
     if (c.pitch_max_torque_n_m < 0.0 || !std::isfinite(c.pitch_max_torque_n_m)) {
         throw std::runtime_error("Config: pitch_max_torque_n_m must be non-negative and finite");

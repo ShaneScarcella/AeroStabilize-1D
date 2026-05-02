@@ -49,6 +49,13 @@ struct Config {
     /** Standard deviation of zero-mean Gaussian error (m) on altitude used only by the simulated flight computer; omitted in config = perfect sensor. */
     double sensor_noise_stddev = 0.0;
 
+    /**
+     * Weight on the latest noisy sample in the exponential moving average (EMA) low-pass applied to
+     * simulated position and attitude measurements before the cascaded PIDs. Valid range is (0, 1]:
+     * values near 1 respond quickly; smaller values smooth more strongly.
+     */
+    double filter_alpha = 1.0;
+
     LogLevel system_log_level = LogLevel::INFO;
     std::string telemetry_csv;
 

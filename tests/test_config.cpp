@@ -122,6 +122,65 @@ telemetry_csv = flight.csv
     EXPECT_EQ(c.gust_start_step, 0);
     EXPECT_EQ(c.gust_duration_steps, 0);
     EXPECT_NEAR(c.sensor_noise_stddev, 0.0, 1e-12);
+    EXPECT_NEAR(c.filter_alpha, 1.0, 1e-12);
+    fs::remove(path);
+}
+
+TEST(Config, FilterAlphaExplicitValueLoads) {
+    const fs::path path = makeTempConfigPath();
+    writeFile(path, R"(mass_kg = 2.0
+initial_altitude_m = 10.0
+waypoint = 0.0, 0.0, 10.0
+dt_s = 0.1
+simulation_steps = 50
+alt_kp = 12.0
+alt_ki = 4.0
+alt_kd = 7.0
+pid_min_thrust_n = 0.0
+pid_max_thrust_n = 30.0
+filter_alpha = 0.25
+telemetry_csv = out.csv
+)");
+    const Config c = Config::loadFromFile(path.string());
+    EXPECT_NEAR(c.filter_alpha, 0.25, 1e-12);
+    fs::remove(path);
+}
+
+TEST(Config, FilterAlphaNonPositiveThrows) {
+    const fs::path path = makeTempConfigPath();
+    writeFile(path, R"(mass_kg = 2.0
+initial_altitude_m = 10.0
+waypoint = 0.0, 0.0, 10.0
+dt_s = 0.1
+simulation_steps = 50
+alt_kp = 12.0
+alt_ki = 4.0
+alt_kd = 7.0
+pid_min_thrust_n = 0.0
+pid_max_thrust_n = 30.0
+filter_alpha = 0.0
+telemetry_csv = out.csv
+)");
+    EXPECT_THROW((void)Config::loadFromFile(path.string()), std::runtime_error);
+    fs::remove(path);
+}
+
+TEST(Config, FilterAlphaGreaterThanOneThrows) {
+    const fs::path path = makeTempConfigPath();
+    writeFile(path, R"(mass_kg = 2.0
+initial_altitude_m = 10.0
+waypoint = 0.0, 0.0, 10.0
+dt_s = 0.1
+simulation_steps = 50
+alt_kp = 12.0
+alt_ki = 4.0
+alt_kd = 7.0
+pid_min_thrust_n = 0.0
+pid_max_thrust_n = 30.0
+filter_alpha = 1.01
+telemetry_csv = out.csv
+)");
+    EXPECT_THROW((void)Config::loadFromFile(path.string()), std::runtime_error);
     fs::remove(path);
 }
 
