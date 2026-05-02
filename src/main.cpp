@@ -10,6 +10,7 @@
 #include <string>
 #include <thread>
 #include <cstddef>
+#include <numbers>
 
 #include "Config.hpp"
 #include "PhysicsEngine.hpp"
@@ -54,9 +55,9 @@ int main(int argc, char* argv[]) {
         telemetry.print(LogLevel::INFO, "Starting simulation");
 
         Vector2D integrated_position = drone.getPosition();
-        telemetry.print(
-            LogLevel::DEBUG,
-            "Time(s)\tTarget\tAlt(m)\tSensed(m)\tVel(m/s)\tThrust(N)\tDist(N)");
+        telemetry.print(LogLevel::DEBUG,
+                        "Time(s)\tTgtX\tTgtZ\tTrueX\tTrueZ\tSensZ\tVelX\tVelZ\tPitchDeg\t"
+                        "Thrust\tTorque\tDist");
         telemetry.print(LogLevel::DEBUG,
                         "-----------------------------------------------------------------------------"
                         "-----");
@@ -90,7 +91,6 @@ int main(int argc, char* argv[]) {
             // True altitude is integrated_position.z (initial pose before the first integration step).
             // The altitude PID sees sensor noise on that value; logging captures the same sample for this tick.
             const double true_altitude = integrated_position.z;
-            const double true_velocity = drone.getVelocity().z;
             const double noise_m = altitude_noise ? (*altitude_noise)(rng) : 0.0;
             const double noisy_altitude = true_altitude + noise_m;
 
@@ -122,17 +122,26 @@ int main(int argc, char* argv[]) {
             double thrust = alt_thrust_body_n / cos_safe;
             thrust = std::clamp(thrust, cfg.pid_min_thrust_n, cfg.pid_max_thrust_n);
 
-            telemetry.logState(elapsed_time, current_target_altitude, true_altitude, noisy_altitude,
-                               true_velocity, thrust, disturbance_n);
+            const Vector2D target_pos{current_target_x, current_target_altitude};
+            const Vector2D true_pos = drone.getPosition();
+            const Vector2D velocity = drone.getVelocity();
+            telemetry.logState(elapsed_time, target_pos, true_pos, noisy_altitude, velocity,
+                               pitch_rad, thrust, torque_n_m, disturbance_n);
 
+            const double pitch_deg = pitch_rad * (180.0 / std::numbers::pi_v<double>);
             std::ostringstream tick_row;
             tick_row << std::fixed << std::setprecision(2)
                      << elapsed_time << "\t"
-                     << current_target_altitude << "\t"
-                     << true_altitude << "\t"
+                     << target_pos.x << "\t"
+                     << target_pos.z << "\t"
+                     << true_pos.x << "\t"
+                     << true_pos.z << "\t"
                      << noisy_altitude << "\t"
-                     << true_velocity << "\t\t"
-                     << thrust << "\t\t"
+                     << velocity.x << "\t"
+                     << velocity.z << "\t"
+                     << pitch_deg << "\t"
+                     << thrust << "\t"
+                     << torque_n_m << "\t"
                      << disturbance_n;
             telemetry.print(LogLevel::DEBUG, tick_row.str());
 

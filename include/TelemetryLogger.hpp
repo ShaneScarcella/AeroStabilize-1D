@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "Vector2D.hpp"
+
 enum class LogLevel {
     DEBUG = 0,
     INFO = 1,
@@ -20,9 +22,10 @@ public:
     TelemetryLogger(const TelemetryLogger&) = delete;
     TelemetryLogger& operator=(const TelemetryLogger&) = delete;
 
-    /** true_alt_m: physics altitude at the logged instant. sensed_alt_m: value passed to the controller (may include sensor noise). */
-    void logState(double time_s, double target_alt_m, double true_alt_m, double sensed_alt_m,
-                  double velocity_m_s, double thrust_n, double disturbance_n);
+    /** Logs planar state; CSV stores pitch in degrees (PitchDeg). In-memory series keep target/true altitude (Z) for reporting. */
+    void logState(double time_s, Vector2D target_pos, Vector2D true_pos, double sensed_alt_m,
+                  Vector2D velocity, double pitch_rad, double thrust_n, double torque_n_m,
+                  double disturbance_n);
     void print(LogLevel level, const std::string& message) const;
 
     const std::vector<double>& getTimes() const { return _times_s; }

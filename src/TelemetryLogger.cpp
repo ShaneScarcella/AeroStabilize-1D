@@ -2,6 +2,7 @@
 
 #include <iomanip>
 #include <iostream>
+#include <numbers>
 #include <stdexcept>
 
 TelemetryLogger::TelemetryLogger(const std::string& filepath, LogLevel system_log_level)
@@ -10,7 +11,8 @@ TelemetryLogger::TelemetryLogger(const std::string& filepath, LogLevel system_lo
     if (!_file.is_open()) {
         throw std::runtime_error("TelemetryLogger: could not open " + filepath);
     }
-    _file << "Time_s,Target_m,Altitude_m,SensedAlt_m,Velocity_m_s,Thrust_N,Disturbance_N\n";
+    _file << "Time_s,TargetX,TargetZ,TrueX,TrueZ,SensedZ,VelX,VelZ,PitchDeg,Thrust,Torque,"
+             "Disturbance\n";
     _file.flush();
 }
 
@@ -20,22 +22,29 @@ TelemetryLogger::~TelemetryLogger() {
     }
 }
 
-void TelemetryLogger::logState(double time_s, double target_alt_m, double true_alt_m,
-                               double sensed_alt_m, double velocity_m_s, double thrust_n,
-                               double disturbance_n) {
-    // Keep an in-memory trace so analysis can run after simulation without reparsing CSV.
+void TelemetryLogger::logState(double time_s, Vector2D target_pos, Vector2D true_pos,
+                               double sensed_alt_m, Vector2D velocity, double pitch_rad,
+                               double thrust_n, double torque_n_m, double disturbance_n) {
+    // Mirror key scalars in RAM so PerformanceAnalyzer can summarize the run without reparsing CSV.
     _times_s.push_back(time_s);
-    _targets_m.push_back(target_alt_m);
-    _altitudes_m.push_back(true_alt_m);
+    _targets_m.push_back(target_pos.z);
+    _altitudes_m.push_back(true_pos.z);
     _sensed_altitudes_m.push_back(sensed_alt_m);
+
+    const double pitch_deg = pitch_rad * (180.0 / std::numbers::pi_v<double>);
 
     _file << std::fixed << std::setprecision(6)
           << time_s << ','
-          << target_alt_m << ','
-          << true_alt_m << ','
+          << target_pos.x << ','
+          << target_pos.z << ','
+          << true_pos.x << ','
+          << true_pos.z << ','
           << sensed_alt_m << ','
-          << velocity_m_s << ','
+          << velocity.x << ','
+          << velocity.z << ','
+          << pitch_deg << ','
           << thrust_n << ','
+          << torque_n_m << ','
           << disturbance_n << '\n';
     _file.flush();
 }

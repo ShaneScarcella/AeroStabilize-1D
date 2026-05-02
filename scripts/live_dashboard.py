@@ -13,11 +13,22 @@ import argparse
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from matplotlib.animation import FuncAnimation
 
-# Columns the dashboard expects; missing or unreadable data keeps the last good frame.
-_REQUIRED = ("Time_s", "Altitude_m", "SensedAlt_m", "Target_m", "Thrust_N")
+# Every column used below must exist; partial or malformed rows are skipped by pandas instead of aborting.
+_REQUIRED = (
+    "Time_s",
+    "TrueX",
+    "TrueZ",
+    "TargetX",
+    "TargetZ",
+    "SensedZ",
+    "PitchDeg",
+    "Thrust",
+    "Torque",
+)
 
 
 def _read_telemetry(path: Path) -> pd.DataFrame | None:
@@ -30,7 +41,7 @@ def _read_telemetry(path: Path) -> pd.DataFrame | None:
         return None
     try:
         df = pd.read_csv(path, on_bad_lines="skip")
-    except (OSError, ValueError):
+    except (OSError, ValueError, PermissionError):
         return None
     if _REQUIRED[0] not in df.columns:
         return None
@@ -59,27 +70,63 @@ def main() -> None:
     if not path.is_absolute():
         path = Path(path).resolve()
 
-    fig, (ax_t, ax_b) = plt.subplots(2, 1, sharex=True, figsize=(9, 6.5))
-    (line_alt,) = ax_t.plot([], [], "b-", label="Altitude_m")
-    (line_sen,) = ax_t.plot(
-        [],
-        [],
-        color="tab:orange",
-        alpha=0.7,
-        label="SensedAlt_m",
+    fig, (ax_spatial, ax_alt, ax_act) = plt.subplots(
+        3,
+        1,
+        figsize=(9, 10),
+        layout="constrained",
+        height_ratios=[1.15, 1.0, 1.0],
     )
-    (line_tar,) = ax_t.plot([], [], color="0.2", linestyle="--", label="Target_m")
-    (line_thr,) = ax_b.plot([], [], "r-", label="Thrust_N")
+    ax_torque = ax_act.twinx()
 
-    ax_t.set_ylabel("Altitude (m)")
-    ax_t.set_title("AeroStabilize-1D — live telemetry")
-    ax_t.grid(True, alpha=0.3)
-    ax_t.legend(loc="upper right")
+    (path_line,) = ax_spatial.plot([], [], "b-", linewidth=1.2, label="True path")
+    (target_pt,) = ax_spatial.plot(
+        [],
+        [],
+        linestyle="none",
+        marker="x",
+        color="red",
+        markersize=11,
+        markeredgewidth=2.2,
+        label="Target",
+    )
+    (drone_seg,) = ax_spatial.plot([], [], "k-", linewidth=5.0, solid_capstyle="round", label="Body")
 
-    ax_b.set_xlabel("Time (s)")
-    ax_b.set_ylabel("Thrust (N)")
-    ax_b.grid(True, alpha=0.3)
-    ax_b.legend(loc="upper right")
+    (line_true_z,) = ax_alt.plot([], [], "b-", label="TrueZ")
+    (line_tar_z,) = ax_alt.plot([], [], color="0.25", linestyle="--", label="TargetZ")
+    (line_sen_z,) = ax_alt.plot([], [], color="tab:orange", alpha=0.85, label="SensedZ")
+
+    (line_thr,) = ax_act.plot([], [], color="tab:red", label="Thrust")
+    (line_tor,) = ax_torque.plot([], [], color="tab:blue", linestyle="-", label="Torque")
+
+    ax_spatial.set_xlabel("TrueX (m)")
+    ax_spatial.set_ylabel("TrueZ (m)")
+    ax_spatial.set_title("AeroStabilize-1D — spatial (radar)")
+    ax_spatial.grid(True, alpha=0.3)
+    ax_spatial.legend(loc="upper right", fontsize=8)
+    ax_spatial.set_aspect("equal", adjustable="datalim")
+
+    ax_alt.set_ylabel("Altitude (m)")
+    ax_alt.set_title("Altitude vs time")
+    ax_alt.grid(True, alpha=0.3)
+    ax_alt.legend(loc="upper right", fontsize=8)
+
+    ax_act.set_xlabel("Time (s)")
+    ax_act.set_ylabel("Thrust (N)", color="tab:red")
+    ax_act.tick_params(axis="y", labelcolor="tab:red")
+    ax_torque.set_ylabel("Torque (N·m)", color="tab:blue")
+    ax_torque.tick_params(axis="y", labelcolor="tab:blue")
+    ax_act.set_title("Actuators")
+    ax_act.grid(True, alpha=0.3)
+
+    h1, l1 = ax_act.get_legend_handles_labels()
+    h2, l2 = ax_torque.get_legend_handles_labels()
+    ax_act.legend(h1 + h2, l1 + l2, loc="upper right", fontsize=8)
+
+    ax_alt.sharex(ax_act)
+
+    # Body segment half-length in meters; nose sits along thrust (+sin pitch, +cos pitch) per PhysicsEngine.
+    body_half_m = 0.35
 
     def on_frame(_frame: int) -> None:
         df = _read_telemetry(path)
@@ -88,20 +135,41 @@ def main() -> None:
         t = df["Time_s"]
         if len(t) == 0:
             return
-        line_alt.set_data(t, df["Altitude_m"])
-        line_sen.set_data(t, df["SensedAlt_m"])
-        line_tar.set_data(t, df["Target_m"])
-        line_thr.set_data(t, df["Thrust_N"])
-        ax_t.relim()
-        ax_t.autoscale_view()
-        ax_b.relim()
-        ax_b.autoscale_view()
 
-    # Keep a reference: some backends stop the loop if the animation is collected.
+        tx = df["TrueX"].to_numpy(dtype=float)
+        tz = df["TrueZ"].to_numpy(dtype=float)
+        path_line.set_data(tx, tz)
+
+        row = df.iloc[-1]
+        tgt_x, tgt_z = float(row["TargetX"]), float(row["TargetZ"])
+        target_pt.set_data([tgt_x], [tgt_z])
+
+        cx, cz = float(row["TrueX"]), float(row["TrueZ"])
+        pitch_deg = float(row["PitchDeg"])
+        pr = np.deg2rad(pitch_deg)
+        dx = body_half_m * np.sin(pr)
+        dz = body_half_m * np.cos(pr)
+        drone_seg.set_data([cx - dx, cx + dx], [cz - dz, cz + dz])
+
+        ax_spatial.relim()
+        ax_spatial.autoscale_view()
+
+        line_true_z.set_data(t, df["TrueZ"])
+        line_tar_z.set_data(t, df["TargetZ"])
+        line_sen_z.set_data(t, df["SensedZ"])
+        ax_alt.relim()
+        ax_alt.autoscale_view()
+
+        line_thr.set_data(t, df["Thrust"])
+        line_tor.set_data(t, df["Torque"])
+        ax_act.relim()
+        ax_act.autoscale_view()
+        ax_torque.relim()
+        ax_torque.autoscale_view()
+
     _animation = FuncAnimation(
         fig, on_frame, interval=args.interval_ms, blit=False, cache_frame_data=False
     )
-    plt.tight_layout()
     plt.show()
 
 
